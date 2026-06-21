@@ -1,0 +1,218 @@
+/* 全局重置与基础样式 */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  color: #333;
+  background-color: #f5f6fa;
+}
+
+#app {
+  height: 100%;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+/* 通用工具类 */
+.text-primary { color: #1890ff; }
+.text-success { color: #52c41a; }
+.text-warning { color: #faad14; }
+.text-danger  { color: #ff4d4f; }
+.text-muted   { color: #999; }
+
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 16px; }
+.mt-4 { margin-top: 24px; }
+
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 16px; }
+.mb-4 { margin-bottom: 24px; }
+
+.flex { display: flex; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 16px; }
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(12px, 3vw, 24px);
+}
+
+/* 状态标签统一样式 */
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.status-on-sale    { background: #e8f5e9; color: #2e7d32; }
+.status-sold       { background: #fce4ec; color: #c62828; }
+.status-off-shelf  { background: #f5f5f5; color: #9e9e9e; }
+.status-banned     { background: #fbe9e7; color: #bf360c; }
+.status-pending    { background: #fff3e0; color: #e65100; }
+.status-approved   { background: #e8f5e9; color: #2e7d32; }
+.status-rejected   { background: #fce4ec; color: #c62828; }
+
+/* 卡片统一样式 */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+.card-body {
+  padding: clamp(12px, 2vw, 20px);
+}
+
+/* 表单区块标题 */
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  padding: 12px 0 8px;
+  border-bottom: 2px solid #1890ff;
+  margin-bottom: 16px;
+}
+
+/* 图片上传预览 */
+.upload-image-preview {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+/* 二维码展示 */
+.qrcode-img {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* 车辆网格：auto-fill + minmax 自动适配列数，无需断点 */
+/* 宽屏3-4列，平板2列，手机1列，全由可用宽度自动决定 */
+.bikes-grid {
+  display: grid;
+  gap: clamp(8px, 2vw, 16px);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+/* 链接样式 */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover { color: #1890ff; }
+
+/* Element Plus 覆盖 */
+.el-button--primary {
+  --el-button-bg-color: #1890ff;
+  --el-button-border-color: #1890ff;
+  --el-button-hover-bg-color: #40a9ff;
+  --el-button-hover-border-color: #40a9ff;
+}
+
+.el-tag.is-on-sale  { --el-tag-bg-color: #e8f5e9; --el-tag-text-color: #2e7d32; --el-tag-border-color: #c8e6c9; }
+.el-tag.is-sold     { --el-tag-bg-color: #fce4ec; --el-tag-text-color: #c62828; --el-tag-border-color: #f8bbd0; }
+
+/* 后台侧边栏 */
+.admin-layout {
+  display: flex;
+  height: 100vh;
+}
+.admin-sidebar {
+  width: 220px;
+  background: #fff;
+  border-right: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.admin-main {
+  flex: 1;
+  overflow-y: auto;
+  background: #f5f6fa;
+}
+.admin-content {
+  padding: clamp(12px, 2vw, 24px);
+}
+@media (max-width: 768px) {
+  .admin-sidebar { display: none; }
+  .admin-sidebar.mobile-open { display: flex; position: fixed; z-index: 999; height: 100vh; box-shadow: 2px 0 8px rgba(0,0,0,0.15); }
+}
+
+/* 页面头部 */
+.page-header {
+  background: #fff;
+  padding: clamp(10px, 2vw, 16px) clamp(12px, 3vw, 24px);
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
+}
+
+/* 数据统计卡片 */
+.stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+.stat-info .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #222;
+  line-height: 1;
+}
+.stat-info .stat-label {
+  font-size: 13px;
+  color: #999;
+  margin-top: 4px;
+}

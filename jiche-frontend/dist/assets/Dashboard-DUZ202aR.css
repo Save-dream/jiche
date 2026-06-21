@@ -1,0 +1,1 @@
+.stats-grid[data-v-ed633e85]{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.quick-grid[data-v-ed633e85]{display:flex;flex-wrap:wrap;gap:12px}@media (max-width: 768px){.stats-grid[data-v-ed633e85]{grid-template-columns:repeat(2,1fr)}.quick-grid .el-button[data-v-ed633e85]{flex:1;min-width:140px}}
