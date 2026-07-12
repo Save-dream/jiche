@@ -13,7 +13,8 @@ PyMySQL>=1.1,<2.0
 python-dotenv>=1.0,<2.0
 
 # —— 图片上传（Pillow）——
-Pillow>=10.0,<11.0
+# 生产建议 Python 3.10–3.12，可直接装预编译 wheel，无需本地编译
+Pillow>=10.0,<12.0
 
 # —— HTTP 客户端（微信 API 等）——
 requests>=2.31,<3.0

@@ -45,6 +45,59 @@ require_venv() {
   fi
 }
 
+# Django 4.2 官方支持 3.8–3.12；优先选用系统中的 3.12/3.11/3.10
+resolve_python() {
+  if [[ -n "${PYTHON_BIN:-}" ]]; then
+    if command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+      command -v "$PYTHON_BIN"
+      return 0
+    fi
+    echo_err "指定的 PYTHON_BIN=$PYTHON_BIN 不存在"
+    exit 1
+  fi
+  local cand
+  for cand in python3.12 python3.11 python3.10 python3; do
+    if command -v "$cand" >/dev/null 2>&1; then
+      command -v "$cand"
+      return 0
+    fi
+  done
+  echo_err "未找到 python3，请先安装 Python 3.10–3.12"
+  exit 1
+}
+
+python_major_minor() {
+  "$1" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'
+}
+
+assert_supported_python() {
+  local py="$1"
+  local ver
+  ver="$(python_major_minor "$py")"
+  case "$ver" in
+    3.10|3.11|3.12)
+      echo_ok "使用 Python $ver ($py)"
+      ;;
+    3.8|3.9)
+      echo_warn "Python $ver 可用，建议升级到 3.11/3.12"
+      ;;
+    *)
+      echo_err "当前 Python $ver 不受支持（检测到路径: $py）"
+      echo_err "Django 4.2 + Pillow 需要 Python 3.10–3.12，请勿使用 3.13/3.14"
+      echo ""
+      echo "Ubuntu/Debian 安装示例："
+      echo "  sudo apt update"
+      echo "  sudo apt install -y python3.12 python3.12-venv python3.12-dev \\"
+      echo "    libjpeg-dev zlib1g-dev libpng-dev"
+      echo ""
+      echo "然后删除旧虚拟环境并重跑："
+      echo "  rm -rf $VENV_DIR"
+      echo "  PYTHON_BIN=python3.12 bash $DEPLOY_DIR/setup.sh --seed"
+      exit 1
+      ;;
+  esac
+}
+
 echo_info() { echo "[INFO] $*"; }
 echo_ok() { echo "[ OK ] $*"; }
 echo_warn() { echo "[WARN] $*"; }

@@ -24,13 +24,28 @@ done
 require_backend
 echo_info "JICHE_HOME=$JICHE_HOME"
 
+PY_BIN="$(resolve_python)"
+assert_supported_python "$PY_BIN"
+
+# 若已有 venv 但版本不对，提示重建
+if [[ -x "$PYTHON" ]]; then
+  VENV_VER="$(python_major_minor "$PYTHON")"
+  case "$VENV_VER" in
+    3.10|3.11|3.12|3.8|3.9) ;;
+    *)
+      echo_warn "现有虚拟环境 Python=$VENV_VER，将删除并重建为 $PY_BIN"
+      rm -rf "$VENV_DIR"
+      ;;
+  esac
+fi
+
 # —— Python 虚拟环境 ——
 if [[ ! -x "$PYTHON" ]]; then
-  echo_info "创建虚拟环境..."
-  python3 -m venv "$VENV_DIR"
+  echo_info "创建虚拟环境 ($PY_BIN)..."
+  "$PY_BIN" -m venv "$VENV_DIR"
 fi
 echo_info "安装 Python 依赖..."
-"$PIP" install -U pip
+"$PIP" install -U pip setuptools wheel
 "$PIP" install -r "$BACKEND_DIR/requirements.txt"
 
 # —— .env ——

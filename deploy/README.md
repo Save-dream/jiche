@@ -11,11 +11,21 @@
 
 ## 快速启动（推荐）
 
+> **Python 必须是 3.10 / 3.11 / 3.12**。系统默认若是 3.13/3.14，Pillow 会编译失败。
+
 ```bash
 cd /home/jiche
 
-# 1. 首次初始化（装依赖 + 迁移 + 构建前端）
-bash deploy/setup.sh --seed
+# 0. 安装兼容的 Python（Ubuntu 示例）
+sudo apt update
+sudo apt install -y python3.12 python3.12-venv python3.12-dev \
+  libjpeg-dev zlib1g-dev libpng-dev
+
+# 若之前用 3.14 建过虚拟环境，先删掉
+rm -rf jiche-backend/.venv
+
+# 1. 首次初始化（显式指定 3.12 更稳妥）
+PYTHON_BIN=python3.12 bash deploy/setup.sh --seed
 
 # 2. 编辑生产配置（必做）
 nano jiche-backend/.env
