@@ -40,5 +40,9 @@ jiche-backend/scripts/*_results.json
 .coverage
 htmlcov/
 
+# Deploy runtime
+deploy/run/
+deploy/logs/
+
 # Misc
 dependencies.txt
