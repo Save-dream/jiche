@@ -11,22 +11,65 @@
 
 ## 快速启动（推荐）
 
-> **Python 必须是 3.10 / 3.11 / 3.12**。系统默认若是 3.13/3.14，Pillow 会编译失败。
+> **Python 必须是 3.10 / 3.11 / 3.12**。  
+> **Ubuntu 26.04** 默认只有 **Python 3.14**，`apt` 没有 3.12 包——请用下面「方案 D」。
+
+```bash
+# 先看系统和已有 Python
+cat /etc/os-release | head -5
+python3 --version
+ls /usr/bin/python3*
+```
+
+### 安装 Python（按你的系统选一种）
+
+**方案 D：Ubuntu 26.04（你的情况）—— 用 uv 装 3.12（推荐）**
 
 ```bash
 cd /home/jiche
+git pull
+bash deploy/install-python312.sh --seed
+```
 
-# 0. 安装兼容的 Python（Ubuntu 示例）
-sudo apt update
-sudo apt install -y python3.12 python3.12-venv python3.12-dev \
-  libjpeg-dev zlib1g-dev libpng-dev
+等价手动步骤：
 
-# 若之前用 3.14 建过虚拟环境，先删掉
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+uv python install 3.12
+cd /home/jiche
 rm -rf jiche-backend/.venv
+PYTHON_BIN="$(uv python find 3.12)" bash deploy/setup.sh --seed
+```
 
-# 1. 首次初始化（显式指定 3.12 更稳妥）
-PYTHON_BIN=python3.12 bash deploy/setup.sh --seed
+**方案 A：Ubuntu 22.04（自带 3.10）**
 
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-dev \
+  libjpeg-dev zlib1g-dev libpng-dev
+cd /home/jiche
+rm -rf jiche-backend/.venv
+PYTHON_BIN=python3.10 bash deploy/setup.sh --seed
+```
+
+**方案 B：用 deadsnakes 装 3.11（旧版 Ubuntu）**
+
+```bash
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install -y python3.11 python3.11-venv python3.11-dev \
+  libjpeg-dev zlib1g-dev libpng-dev
+cd /home/jiche
+rm -rf jiche-backend/.venv
+PYTHON_BIN=python3.11 bash deploy/setup.sh --seed
+```
+
+### 继续部署
+
+```bash
 # 2. 编辑生产配置（必做）
 nano jiche-backend/.env
 # 至少改：DJANGO_DEBUG=false、DJANGO_ALLOWED_HOSTS、数据库、SHARE_WEB_BASE_URL、CORS

@@ -45,9 +45,13 @@ require_venv() {
   fi
 }
 
-# Django 4.2 官方支持 3.8–3.12；优先选用系统中的 3.12/3.11/3.10
+# Django 4.2 官方支持 3.8–3.12；优先选用 3.12/3.11/3.10（含 uv/pyenv 安装路径）
 resolve_python() {
   if [[ -n "${PYTHON_BIN:-}" ]]; then
+    if [[ -x "$PYTHON_BIN" ]]; then
+      echo "$PYTHON_BIN"
+      return 0
+    fi
     if command -v "$PYTHON_BIN" >/dev/null 2>&1; then
       command -v "$PYTHON_BIN"
       return 0
@@ -55,14 +59,43 @@ resolve_python() {
     echo_err "指定的 PYTHON_BIN=$PYTHON_BIN 不存在"
     exit 1
   fi
+
   local cand
-  for cand in python3.12 python3.11 python3.10 python3; do
+  # 常见安装位置：系统 apt / uv / pyenv / 手动编译
+  local -a candidates=(
+    python3.12 python3.11 python3.10
+    /usr/local/bin/python3.12 /usr/local/bin/python3.11 /usr/local/bin/python3.10
+    "$HOME/.local/bin/python3.12" "$HOME/.local/bin/python3.11"
+    "$HOME/.pyenv/versions/3.12.10/bin/python" "$HOME/.pyenv/versions/3.12.9/bin/python"
+    "$HOME/.pyenv/versions/3.12.8/bin/python" "$HOME/.pyenv/versions/3.11.11/bin/python"
+  )
+
+  # uv 默认安装目录
+  if [[ -d "$HOME/.local/share/uv/python" ]]; then
+    local uv_py
+    while IFS= read -r uv_py; do
+      candidates+=("$uv_py")
+    done < <(find "$HOME/.local/share/uv/python" -type f -path '*/bin/python3.*' 2>/dev/null | sort -r)
+  fi
+
+  for cand in "${candidates[@]}"; do
+    if [[ -x "$cand" ]]; then
+      echo "$cand"
+      return 0
+    fi
     if command -v "$cand" >/dev/null 2>&1; then
       command -v "$cand"
       return 0
     fi
   done
-  echo_err "未找到 python3，请先安装 Python 3.10–3.12"
+
+  # 最后才考虑系统 python3（可能是 3.14，后面 assert 会拦截）
+  if command -v python3 >/dev/null 2>&1; then
+    command -v python3
+    return 0
+  fi
+
+  echo_err "未找到可用 Python，请先安装 3.10–3.12（见下方提示）"
   exit 1
 }
 
@@ -83,16 +116,25 @@ assert_supported_python() {
       ;;
     *)
       echo_err "当前 Python $ver 不受支持（检测到路径: $py）"
-      echo_err "Django 4.2 + Pillow 需要 Python 3.10–3.12，请勿使用 3.13/3.14"
+      echo_err "Ubuntu 26.04 默认只有 3.14，请额外安装 3.12 后再跑 setup"
       echo ""
-      echo "Ubuntu/Debian 安装示例："
-      echo "  sudo apt update"
-      echo "  sudo apt install -y python3.12 python3.12-venv python3.12-dev \\"
-      echo "    libjpeg-dev zlib1g-dev libpng-dev"
-      echo ""
-      echo "然后删除旧虚拟环境并重跑："
+      echo "推荐（uv，最快）："
+      echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+      echo "  source \$HOME/.local/bin/env 2>/dev/null || export PATH=\"\$HOME/.local/bin:\$PATH\""
+      echo "  uv python install 3.12"
       echo "  rm -rf $VENV_DIR"
-      echo "  PYTHON_BIN=python3.12 bash $DEPLOY_DIR/setup.sh --seed"
+      echo "  PYTHON_BIN=\$(uv python find 3.12) bash $DEPLOY_DIR/setup.sh --seed"
+      echo ""
+      echo "或用官方源码安装 3.12："
+      echo "  sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev \\"
+      echo "    libreadline-dev libsqlite3-dev libffi-dev liblzma-dev \\"
+      echo "    libjpeg-dev libpng-dev wget"
+      echo "  cd /tmp && wget https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tgz"
+      echo "  tar xf Python-3.12.10.tgz && cd Python-3.12.10"
+      echo "  ./configure --enable-optimizations --prefix=/usr/local"
+      echo "  make -j\$(nproc) && sudo make altinstall"
+      echo "  rm -rf $VENV_DIR"
+      echo "  PYTHON_BIN=/usr/local/bin/python3.12 bash $DEPLOY_DIR/setup.sh --seed"
       exit 1
       ;;
   esac
