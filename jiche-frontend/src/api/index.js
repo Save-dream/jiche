@@ -1,22 +1,17 @@
 /**
- * API 统一封装
- * 开发阶段使用 Mock 数据，生产环境替换 USE_MOCK = false 并配置 BASE_URL
+ * API 统一封装 — 全部对接 Django 后端
  */
 import axios from 'axios'
-import { mockApi } from './mock'
 import { ElMessage } from 'element-plus'
 
-const USE_MOCK = true
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-// ==================== Axios 实例 ====================
 const request = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
 
-// 请求拦截：附加 token
 request.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -26,7 +21,6 @@ request.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// 响应拦截：统一错误处理
 request.interceptors.response.use(
   (response) => {
     const res = response.data
@@ -37,12 +31,17 @@ request.interceptors.response.use(
     return res
   },
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 403) {
+      ElMessage.error('暂无操作权限')
+    } else if (error.response?.status === 409) {
+      const msg = error.response?.data?.msg || '请求冲突'
+      return Promise.reject(new Error(msg))
+    } else if (error.response?.status === 401) {
       ElMessage.error('登录已过期，请重新登录')
       localStorage.removeItem('token')
-      window.location.href = '/login'
-    } else if (error.response?.status === 403) {
-      ElMessage.error('暂无操作权限')
+      localStorage.removeItem('user')
+    } else if (error.code === 'ERR_NETWORK') {
+      ElMessage.error('无法连接后端，请确认 Django 服务已启动（端口 8000）')
     } else {
       ElMessage.error(error.message || '网络错误')
     }
@@ -50,57 +49,87 @@ request.interceptors.response.use(
   }
 )
 
-// ==================== API 函数 ====================
-// USE_MOCK = true 时使用 mock，false 时使用真实接口
+const api = {
+  // ========== 认证 ==========
+  createLoginTicket: () => request.post('/auth/login-ticket/'),
+  pollLoginTicket: (ticketId) => request.get(`/auth/login-ticket/${ticketId}/`),
+  simulateScanLogin: (ticketId, userId) =>
+    request.post(`/auth/login-ticket/${ticketId}/simulate/`, userId ? { user_id: userId } : {}),
+  logout: () => request.post('/auth/logout/'),
+  getUserInfo: () => request.get('/auth/me/'),
+  devLogin: (role) => request.post('/auth/dev/login/', { role }),
+  getAdminUsers: (params) => request.get('/admin/users/', { params }),
+  grantStaff: (userId) => request.post(`/admin/users/${userId}/grant-staff/`),
+  revokeStaff: (userId) => request.post(`/admin/users/${userId}/revoke-staff/`),
 
-const api = USE_MOCK
-  ? mockApi
-  : {
-      // 真实接口（生产环境填写）
-      getBikeList: (params) => request.get('/bikes/', { params }),
-      getBikeDetail: (id) => request.get(`/bikes/${id}/`),
-      getShopDetail: (id) => request.get(`/shops/${id}/`),
-      getMyBikes: (params) => request.get('/shop/bikes/', { params }),
-      getMyMessages: (params) => request.get('/shop/messages/', { params }),
-      getAllMessages: (params) => request.get('/admin/messages/', { params }),
-      getShopApplications: (params) => request.get('/admin/applications/', { params }),
-      getAllShops: (params) => request.get('/admin/shops/', { params }),
-      getAllBikes: (params) => request.get('/admin/bikes/', { params }),
-      getBrands: () => request.get('/brands/'),
-      getModels: (brandId) => request.get(`/brands/${brandId}/models/`),
-      getShopStats: () => request.get('/shop/stats/'),
-      getAdminStats: () => request.get('/admin/stats/'),
+  // ========== 入驻 / 上传 ==========
+  uploadImage: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request.post('/uploads/image/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  submitApplication: (data) => request.post('/applications/', data),
+  getMyApplication: () => request.get('/applications/my/'),
+  getShopApplications: (params) => request.get('/admin/applications/', { params }),
+  auditShop: (id, data) => request.post(`/admin/applications/${id}/audit/`, data),
 
-      // 用户认证
-      login: (data) => request.post('/auth/login/', data),
-      logout: () => request.post('/auth/logout/'),
-      getUserInfo: () => request.get('/auth/me/'),
+  // ========== 品牌字典 ==========
+  getBrands: () => request.get('/brands/'),
+  getModels: (brandId) => request.get(`/brands/${brandId}/models/`),
 
-      // 商家入驻
-      submitApplication: (data) => request.post('/applications/', data),
-      getMyApplication: () => request.get('/applications/my/'),
+  // ========== C 端商家 / 车源 ==========
+  getBikeList: () => Promise.resolve({ code: 200, msg: 'success', data: { list: [], total: 0 } }),
+  getBikeDetail: (id, params) => request.get(`/bikes/${id}/`, { params }),
+  getShopDetail: (id, params) => request.get(`/shops/${id}/`, { params }),
 
-      // 车辆操作
-      createBike: (data) => request.post('/shop/bikes/', data),
-      updateBike: (id, data) => request.put(`/shop/bikes/${id}/`, data),
-      offShelfBike: (id) => request.post(`/shop/bikes/${id}/off-shelf/`),
-      deleteBike: (id) => request.delete(`/shop/bikes/${id}/`),
+  // ========== 收藏 ==========
+  getFavorites: () => request.get('/favorites/'),
+  addFavorite: (bikeId) => request.post('/favorites/', { bike_id: bikeId }),
+  removeFavorite: (bikeId) => request.delete(`/favorites/${bikeId}/`),
 
-      // 留言
-      submitMessage: (data) => request.post('/messages/', data),
-      replyMessage: (id, data) => request.post(`/messages/${id}/reply/`, data),
+  // ========== 留言 ==========
+  getUserMessageThreads: () => request.get('/message-threads/'),
+  getMyMessageThreads: (params) => request.get('/shop/message-threads/', { params }),
+  getMyMessages: (params) => request.get('/shop/message-threads/', { params }),
+  getMessageThread: (id) => request.get(`/message-threads/${id}/`),
+  sendMessage: (id, data) => request.post(`/message-threads/${id}/messages/`, data),
+  createMessageThread: (data) => request.post('/message-threads/', data),
+  submitMessage: (data) => request.post('/message-threads/', data),
+  replyMessage: (id, data) => request.post(`/message-threads/${id}/messages/`, data),
+  markThreadRead: (id, role) => request.post(`/message-threads/${id}/read/`, { role }),
+  getUnreadCount: (role = 'user') => request.get('/messages/unread-count/', { params: { role } }),
+  getAllMessages: (params) => request.get('/admin/message-threads/', { params }),
+  resolveShareLink: (code) => request.get(`/s/${code}/`),
 
-      // 收藏
-      getFavorites: () => request.get('/favorites/'),
-      addFavorite: (bikeId) => request.post('/favorites/', { bike_id: bikeId }),
-      removeFavorite: (bikeId) => request.delete(`/favorites/${bikeId}/`),
+  // ========== 最近访问 ==========
+  getVisitedShops: () => request.get('/visits/'),
+  recordVisit: (shopId) => request.post('/visits/', { shop_id: shopId }),
 
-      // 管理员
-      auditShop: (id, data) => request.post(`/admin/applications/${id}/audit/`, data),
-      banShop: (id) => request.post(`/admin/shops/${id}/ban/`),
-      unbanShop: (id) => request.post(`/admin/shops/${id}/unban/`),
-      forceOffShelf: (id) => request.post(`/admin/bikes/${id}/force-off-shelf/`),
-      restoreBike: (id) => request.post(`/admin/bikes/${id}/restore/`),
-    }
+  // ========== 商家后台 ==========
+  getMyBikes: (params) => request.get('/shop/bikes/', { params }),
+  getShopBike: (id) => request.get(`/shop/bikes/${id}/`),
+  createBike: (data) => request.post('/shop/bikes/', data),
+  updateBike: (id, data) => request.put(`/shop/bikes/${id}/`, data),
+  offShelfBike: (id) => request.post(`/shop/bikes/${id}/off-shelf/`),
+  onShelfBike: (id) => request.post(`/shop/bikes/${id}/on-shelf/`),
+  markSoldBike: (id) => request.post(`/shop/bikes/${id}/mark-sold/`),
+  createBikeShareLink: (id) => request.post(`/shop/bikes/${id}/share-link/`),
+  deleteBike: (id) => request.delete(`/shop/bikes/${id}/`),
+  getShopProfile: () => request.get('/shop/profile/'),
+  updateShopProfile: (data) => request.put('/shop/profile/', data),
+  getShopStats: () => request.get('/shop/stats/'),
+
+  // ========== 管理端 ==========
+  getAllShops: (params) => request.get('/admin/shops/', { params }),
+  banShop: (id) => request.post(`/admin/shops/${id}/ban/`),
+  unbanShop: (id) => request.post(`/admin/shops/${id}/unban/`),
+  getAllBikes: (params) => request.get('/admin/bikes/', { params }),
+  forceOffShelf: (id, data) => request.post(`/admin/bikes/${id}/force-off-shelf/`, data || {}),
+  restoreBike: (id) => request.post(`/admin/bikes/${id}/restore/`),
+  adminDeleteBike: (id) => request.delete(`/admin/bikes/${id}/`),
+  getAdminStats: () => request.get('/admin/stats/'),
+}
 
 export default api

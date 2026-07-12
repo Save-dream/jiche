@@ -1,0 +1,44 @@
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.sqlite3
+db.sqlite3
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.development
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Build
+jiche-frontend/dist/
+dist/
+
+# Uploads / media
+jiche-backend/media/
+media/
+
+# Test / temp outputs
+jiche-backend/scripts/*_results.json
+*.log
+.coverage
+htmlcov/
+
+# Misc
+dependencies.txt

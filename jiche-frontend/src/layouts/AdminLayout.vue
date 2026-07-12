@@ -30,7 +30,7 @@
     <div class="shop-main">
       <div class="shop-topbar" v-if="isMobile">
         <button class="topbar-menu-btn" @click="sidebarOpen = true"><el-icon><Menu /></el-icon></button>
-        <span class="topbar-title">管理中心</span>
+        <span class="topbar-title">{{ pageTitle }}</span>
       </div>
       <div class="shop-content">
         <router-view />
@@ -40,28 +40,62 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/api'
 
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
 const isMobile = ref(false)
+const pendingAuditCount = ref(0)
 
 function checkMobile() { isMobile.value = window.innerWidth <= 768 }
-onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
-onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
-const navItems = [
+async function loadPendingAuditCount() {
+  try {
+    const res = await api.getShopApplications({ status: 1 })
+    pendingAuditCount.value = res.data?.total || 0
+  } catch {
+    pendingAuditCount.value = 0
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  window.addEventListener('admin:pending-audit-changed', loadPendingAuditCount)
+  loadPendingAuditCount()
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+  window.removeEventListener('admin:pending-audit-changed', loadPendingAuditCount)
+})
+
+watch(
+  () => route.path,
+  (path) => {
+    if (path.startsWith('/admin')) loadPendingAuditCount()
+  }
+)
+
+const navItems = computed(() => [
   { path: '/admin/dashboard', label: '数据概览', icon: 'DataBoard' },
-  { path: '/admin/audit', label: '商家审核', icon: 'Checked', badge: 2 },
+  { path: '/admin/audit', label: '商家审核', icon: 'Checked', badge: pendingAuditCount.value },
   { path: '/admin/shops', label: '商户管理', icon: 'OfficeBuilding' },
   { path: '/admin/bikes', label: '车源管控', icon: 'List' },
   { path: '/admin/messages', label: '留言查看', icon: 'ChatDotRound' },
-]
+  { path: '/admin/users', label: '管理员管理', icon: 'UserFilled' },
+])
 
-function handleLogout() { auth.logout(); router.push('/') }
+const pageTitle = computed(() => {
+  const item = navItems.value.find((entry) => route.path === entry.path || route.path.startsWith(`${entry.path}/`))
+  return item?.label || '管理中心'
+})
+
+function handleLogout() { auth.logout(); router.push('/login') }
 </script>
 
 <style scoped>

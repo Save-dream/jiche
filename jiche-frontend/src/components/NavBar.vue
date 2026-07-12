@@ -9,7 +9,11 @@
 
       <!-- PC 导航菜单 -->
       <nav class="navbar__nav" v-if="!isMobile">
-        <router-link to="/" class="nav-link" :class="{ active: $route.path === '/' }">车源广场</router-link>
+        <router-link to="/" class="nav-link" :class="{ active: $route.path === '/' }">首页</router-link>
+        <router-link to="/messages" class="nav-link" :class="{ active: $route.path.startsWith('/messages') }">
+          我的咨询
+          <el-badge v-if="auth.userUnreadMessages" :value="auth.userUnreadMessages" class="nav-badge" />
+        </router-link>
         <router-link v-if="auth.isShop" to="/shop/dashboard" class="nav-link">商家后台</router-link>
         <router-link v-if="auth.isAdmin" to="/admin/dashboard" class="nav-link">管理中心</router-link>
       </nav>
@@ -17,7 +21,7 @@
       <!-- 右侧操作区 -->
       <div class="navbar__actions">
         <!-- 调试角色切换（开发用） -->
-        <el-dropdown v-if="showDevTools && !isMobile" @command="auth.switchRole" class="dev-switcher">
+        <el-dropdown v-if="showDevTools && !isMobile" @command="handleSwitchRole" class="dev-switcher">
           <el-button size="small" type="warning" plain>
             [Dev] {{ roleLabel }} <el-icon><ArrowDown /></el-icon>
           </el-button>
@@ -26,6 +30,7 @@
               <el-dropdown-item command="user">普通用户</el-dropdown-item>
               <el-dropdown-item command="pending">待审核商家</el-dropdown-item>
               <el-dropdown-item command="shop">已入驻商家</el-dropdown-item>
+              <el-dropdown-item command="banned">封禁商家</el-dropdown-item>
               <el-dropdown-item command="admin">管理员</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -37,35 +42,29 @@
         </router-link>
 
         <!-- 用户头像/登录 -->
-        <el-dropdown @command="handleUserCommand">
-          <div class="navbar__avatar">
+        <template v-if="auth.isLoggedIn">
+          <el-dropdown v-if="!isMobile" @command="handleUserCommand">
+            <div class="navbar__avatar">
+              <el-icon><UserFilled /></el-icon>
+              <span v-if="!isMobile" class="navbar__username">{{ auth.user?.nickname }}</span>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item v-if="auth.isShop" command="shop">商家后台</el-dropdown-item>
+                <el-dropdown-item v-if="auth.isAdmin" command="admin">管理中心</el-dropdown-item>
+                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <router-link v-if="isMobile" to="/profile" class="navbar__avatar mobile-avatar">
             <el-icon><UserFilled /></el-icon>
-            <span v-if="!isMobile" class="navbar__username">{{ auth.user?.nickname || '登录' }}</span>
-          </div>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item v-if="auth.isShop" command="shop">商家后台</el-dropdown-item>
-              <el-dropdown-item v-if="auth.isAdmin" command="admin">管理中心</el-dropdown-item>
-              <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-
-        <!-- 移动端菜单按钮 -->
-        <button v-if="isMobile" class="navbar__menu-btn" @click="mobileMenuOpen = !mobileMenuOpen">
-          <el-icon><Menu /></el-icon>
-        </button>
+          </router-link>
+        </template>
+        <router-link v-else to="/login" class="navbar__login-btn">
+          <el-button type="primary" size="small" round>微信登录</el-button>
+        </router-link>
       </div>
-    </div>
-
-    <!-- 移动端菜单 -->
-    <div v-if="isMobile && mobileMenuOpen" class="navbar__mobile-menu">
-      <router-link to="/" class="mobile-nav-link" @click="mobileMenuOpen = false">车源广场</router-link>
-      <router-link to="/favorites" class="mobile-nav-link" @click="mobileMenuOpen = false">我的收藏</router-link>
-      <router-link to="/profile" class="mobile-nav-link" @click="mobileMenuOpen = false">个人中心</router-link>
-      <router-link v-if="auth.isShop" to="/shop/dashboard" class="mobile-nav-link" @click="mobileMenuOpen = false">商家后台</router-link>
-      <router-link v-if="auth.isAdmin" to="/admin/dashboard" class="mobile-nav-link" @click="mobileMenuOpen = false">管理中心</router-link>
     </div>
   </header>
 </template>
@@ -73,12 +72,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAuthStore, SHOP_STATUS } from '@/stores/auth'
+import api from '@/api'
 
 const auth = useAuthStore()
 const router = useRouter()
 
-const mobileMenuOpen = ref(false)
 const isMobile = ref(false)
 const showDevTools = ref(true) // 开发调试用，生产关闭
 
@@ -99,7 +99,16 @@ function handleUserCommand(cmd) {
   if (cmd === 'profile') router.push('/profile')
   else if (cmd === 'shop') router.push('/shop/dashboard')
   else if (cmd === 'admin') router.push('/admin/dashboard')
-  else if (cmd === 'logout') { auth.logout(); router.push('/') }
+  else if (cmd === 'logout') { auth.logout(); router.push('/login') }
+}
+
+async function handleSwitchRole(role) {
+  try {
+    await auth.switchRole(role, api)
+    ElMessage.success('已切换开发演示账号')
+  } catch {
+    /* 错误由 axios 拦截器提示 */
+  }
 }
 </script>
 
@@ -180,41 +189,19 @@ function handleUserCommand(cmd) {
 .navbar__avatar:hover { background: #f5f5f5; }
 .navbar__username { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.navbar__menu-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 22px;
+.mobile-avatar {
+  text-decoration: none;
   color: #555;
-  display: flex;
-  align-items: center;
 }
 
-.navbar__mobile-menu {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid #f0f0f0;
-  background: #fff;
-}
-.mobile-nav-link {
-  padding: 14px 20px;
-  font-size: 14px;
-  color: #333;
-  text-decoration: none;
-  border-bottom: 1px solid #f5f5f5;
-}
-.mobile-nav-link:hover { background: #f5f5f5; color: #1890ff; }
+.navbar__login-btn { text-decoration: none; }
+
 .dev-switcher { display: flex; }
 
-/* CSS媒体查询备份：即使JS isMobile未触发，CSS也保证不溢出 */
 @media (max-width: 768px) {
   .navbar__nav { display: none; }
   .dev-switcher { display: none !important; }
   .navbar__icon-btn { display: none; }
   .navbar__username { display: none; }
-  .navbar__menu-btn { display: flex; }
-}
-@media (min-width: 769px) {
-  .navbar__menu-btn { display: none; }
 }
 </style>

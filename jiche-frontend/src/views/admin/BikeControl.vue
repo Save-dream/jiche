@@ -46,11 +46,19 @@
                 <el-button size="small" type="danger">强制下架</el-button>
               </template>
             </el-popconfirm>
-            <el-popconfirm v-if="row.bike_status === 4" title="确认恢复该车辆为在售状态？" @confirm="restoreBike(row)">
+            <el-popconfirm v-if="row.bike_status === 4" title="确认恢复该违规下架车辆为在售？（仅管理员可操作）" @confirm="restoreBike(row)">
               <template #reference>
                 <el-button size="small" type="success">恢复上架</el-button>
               </template>
             </el-popconfirm>
+            <el-popconfirm title="确认删除该车源？删除后用户端将不再展示，且不可恢复。" @confirm="deleteBike(row)">
+              <template #reference>
+                <el-button size="small" type="danger" plain>删除</el-button>
+              </template>
+            </el-popconfirm>
+            <el-tooltip v-if="row.bike_status === 3" content="商家手动下架，由商家自行恢复" placement="top">
+              <el-button size="small" disabled>商家下架</el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -78,14 +86,19 @@ async function loadData() {
 }
 
 async function forceOffShelf(row) {
-  await new Promise(r => setTimeout(r, 400))
-  row.bike_status = 4
+  const res = await api.forceOffShelf(row.id)
+  row.bike_status = res.data.bike_status
   ElMessage.success('已强制下架')
 }
 async function restoreBike(row) {
-  await new Promise(r => setTimeout(r, 400))
-  row.bike_status = 1
+  const res = await api.restoreBike(row.id)
+  row.bike_status = res.data.bike_status
   ElMessage.success('已恢复上架')
+}
+async function deleteBike(row) {
+  await api.adminDeleteBike(row.id)
+  bikes.value = bikes.value.filter((b) => b.id !== row.id)
+  ElMessage.success('已删除，用户端将不再展示')
 }
 
 onMounted(loadData)

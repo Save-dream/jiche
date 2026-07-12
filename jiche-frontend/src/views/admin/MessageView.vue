@@ -5,33 +5,36 @@
       <el-tag type="info">只读视图，不可代为回复</el-tag>
     </div>
 
-    <div class="card">
-      <div v-loading="loading">
-        <div v-if="messages.length === 0" style="padding:40px"><el-empty description="暂无留言记录" /></div>
-        <div v-for="msg in messages" :key="msg.id" class="msg-item">
-          <div class="msg-header">
-            <div class="msg-meta">
-              <el-tag :type="MESSAGE_STATUS[msg.message_status]?.type" size="small">{{ MESSAGE_STATUS[msg.message_status]?.label }}</el-tag>
-              <span class="msg-bike-link" @click="$router.push(`/bike/${msg.bike_id}`)">{{ msg.bike_info }}</span>
-              <span class="msg-time">{{ msg.created_at }}</span>
+    <div class="card" v-loading="loading">
+      <div v-if="threads.length">
+        <div v-for="thread in threads" :key="thread.id" class="thread-item">
+          <div class="thread-header">
+            <div class="thread-meta">
+              <el-tag :type="MESSAGE_STATUS[thread.thread_status]?.type" size="small">
+                {{ MESSAGE_STATUS[thread.thread_status]?.label }}
+              </el-tag>
+              <span class="thread-bike">{{ thread.bike_info }}</span>
+              <span class="thread-user">{{ thread.user_name }}</span>
+              <span v-if="thread.contact_phone" class="thread-phone">{{ thread.contact_phone }}</span>
             </div>
-            <div class="msg-user-info">
-              <span class="msg-user">{{ msg.user_name }}</span>
-              <span v-if="msg.contact_phone" class="msg-phone"><el-icon><Phone /></el-icon>{{ msg.contact_phone }}</span>
-            </div>
+            <span class="thread-time">{{ thread.updated_at }}</span>
           </div>
 
-          <div class="msg-content">{{ msg.content }}</div>
-
-          <div v-if="msg.reply_content" class="reply-box">
-            <div class="reply-header"><el-icon><ChatDotRound /></el-icon> 商家回复 · {{ msg.replied_at }}</div>
-            <div class="reply-content">{{ msg.reply_content }}</div>
-          </div>
-          <div v-else class="no-reply">
-            <el-tag type="warning" size="small">待商家回复</el-tag>
+          <div class="message-list">
+            <div
+              v-for="msg in thread.messages"
+              :key="msg.id"
+              class="message-row"
+              :class="msg.sender_type === 1 ? 'from-user' : 'from-shop'"
+            >
+              <span class="sender-label">{{ msg.sender_type === 1 ? '用户' : '商家' }}</span>
+              <span class="message-text">{{ msg.content }}</span>
+              <span class="message-time">{{ msg.created_at }}</span>
+            </div>
           </div>
         </div>
       </div>
+      <el-empty v-else description="暂无留言记录" />
     </div>
   </div>
 </template>
@@ -41,33 +44,35 @@ import { ref, onMounted } from 'vue'
 import { MESSAGE_STATUS } from '@/stores/auth'
 import api from '@/api'
 
-const messages = ref([])
+const threads = ref([])
 const loading = ref(false)
 
 onMounted(async () => {
   loading.value = true
   try {
     const res = await api.getAllMessages()
-    messages.value = res.data.list
-  } finally { loading.value = false }
+    threads.value = res.data.list
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
 <style scoped>
 .page-header-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.msg-item { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
-.msg-item:last-child { border-bottom: none; }
-.msg-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
-.msg-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.msg-bike-link { font-size: 13px; color: #1890ff; cursor: pointer; }
-.msg-bike-link:hover { text-decoration: underline; }
-.msg-time { font-size: 12px; color: #aaa; }
-.msg-user-info { display: flex; align-items: center; gap: 10px; }
-.msg-user { font-size: 13px; color: #666; }
-.msg-phone { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #888; }
-.msg-content { font-size: 14px; color: #333; line-height: 1.6; margin-bottom: 8px; }
-.reply-box { background: #f9fafb; border-radius: 8px; padding: 10px 12px; border-left: 3px solid #1890ff; }
-.reply-header { font-size: 12px; color: #888; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-.reply-content { font-size: 13px; color: #555; }
-.no-reply { margin-top: 6px; }
+.thread-item { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+.thread-item:last-child { border-bottom: none; }
+.thread-header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.thread-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.thread-bike { font-size: 13px; color: #333; font-weight: 600; }
+.thread-user { font-size: 13px; color: #666; }
+.thread-phone { font-size: 12px; color: #888; }
+.thread-time { font-size: 12px; color: #aaa; }
+.message-list { display: flex; flex-direction: column; gap: 8px; background: #fafafa; border-radius: 8px; padding: 12px; }
+.message-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 13px; }
+.sender-label { font-weight: 600; color: #555; min-width: 36px; }
+.from-user .sender-label { color: #1890ff; }
+.from-shop .sender-label { color: #52c41a; }
+.message-text { flex: 1; color: #333; line-height: 1.5; }
+.message-time { font-size: 11px; color: #bbb; }
 </style>

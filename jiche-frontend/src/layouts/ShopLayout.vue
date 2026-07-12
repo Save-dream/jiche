@@ -50,27 +50,48 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/api'
 
 const auth = useAuthStore()
 const router = useRouter()
 const sidebarOpen = ref(false)
 const isMobile = ref(false)
+const unreadMessages = ref(0)
 
 function checkMobile() { isMobile.value = window.innerWidth <= 768 }
-onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
-onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
-const navItems = [
+async function loadUnread() {
+  try {
+    const res = await api.getUnreadCount('shop')
+    unreadMessages.value = res.data?.unread_count || 0
+  } catch {
+    unreadMessages.value = 0
+  }
+}
+
+let unreadTimer = null
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  loadUnread()
+  unreadTimer = setInterval(loadUnread, 30000)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+  if (unreadTimer) clearInterval(unreadTimer)
+})
+
+const navItems = computed(() => [
   { path: '/shop/dashboard', label: '概览', icon: 'DataBoard' },
   { path: '/shop/bikes', label: '我的车源', icon: 'List' },
-  { path: '/shop/messages', label: '留言管理', icon: 'ChatDotRound', badge: 2 },
+  { path: '/shop/messages', label: '留言管理', icon: 'ChatDotRound', badge: unreadMessages.value },
   { path: '/shop/profile', label: '商家资料', icon: 'Setting' },
-]
+])
 
-function handleLogout() { auth.logout(); router.push('/') }
+function handleLogout() { auth.logout(); router.push('/login') }
 </script>
 
 <style scoped>

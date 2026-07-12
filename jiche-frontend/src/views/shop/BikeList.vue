@@ -43,11 +43,16 @@
         </el-table-column>
         <el-table-column prop="view_count" label="浏览" width="70" align="center" />
         <el-table-column prop="created_at" label="发布时间" width="110" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="$router.push(`/shop/bikes/${row.id}/edit`)">编辑</el-button>
+            <el-button size="small" @click="copyShareLink(row)">分享</el-button>
+            <el-button size="small" type="danger" plain v-if="row.bike_status === 1" @click="markSold(row)">已售</el-button>
             <el-button size="small" type="warning" v-if="row.bike_status === 1" @click="offShelf(row)">下架</el-button>
             <el-button size="small" type="success" v-if="row.bike_status === 3" @click="reOnShelf(row)">重新上架</el-button>
+            <el-tooltip v-if="row.bike_status === 4" content="违规下架仅管理员可恢复" placement="top">
+              <el-button size="small" type="info" disabled>违规下架</el-button>
+            </el-tooltip>
             <el-popconfirm title="确认删除此车辆？删除后不可恢复。" @confirm="deleteBike(row)">
               <template #reference>
                 <el-button size="small" type="danger" v-if="row.bike_status !== 4">删除</el-button>
@@ -75,8 +80,11 @@
         </div>
         <div class="mobile-bike-actions">
           <el-button size="small" @click="$router.push(`/shop/bikes/${row.id}/edit`)">编辑</el-button>
+          <el-button size="small" @click="copyShareLink(row)">分享</el-button>
+          <el-button size="small" type="danger" plain v-if="row.bike_status === 1" @click="markSold(row)">已售</el-button>
           <el-button size="small" type="warning" v-if="row.bike_status === 1" @click="offShelf(row)">下架</el-button>
           <el-button size="small" type="success" v-if="row.bike_status === 3" @click="reOnShelf(row)">上架</el-button>
+          <el-button size="small" type="info" v-if="row.bike_status === 4" disabled>违规下架</el-button>
           <el-popconfirm title="确认删除？" @confirm="deleteBike(row)">
             <template #reference>
               <el-button size="small" type="danger" v-if="row.bike_status !== 4">删除</el-button>
@@ -101,26 +109,45 @@ const activeStatus = ref(0)
 async function loadBikes() {
   loading.value = true
   try {
-    const res = await api.getMyBikes()
-    const list = res.data.list
-    bikes.value = activeStatus.value === 0 ? list : list.filter(b => b.bike_status === activeStatus.value)
+    const params = activeStatus.value !== 0 ? { status: activeStatus.value } : {}
+    const res = await api.getMyBikes(params)
+    bikes.value = res.data.list
   } finally {
     loading.value = false
   }
 }
 
+async function copyShareLink(bike) {
+  try {
+    const res = await api.createBikeShareLink(bike.id)
+    const link = res.data.short_url || res.data.full_url
+    try {
+      await navigator.clipboard.writeText(link)
+      ElMessage.success('已复制带签名的短链（7 天有效）')
+    } catch {
+      ElMessage.info(link)
+    }
+  } catch { /* interceptor */ }
+}
+
+async function markSold(bike) {
+  const res = await api.markSoldBike(bike.id)
+  bike.bike_status = res.data.bike_status
+  ElMessage.success('已标记为已售')
+}
+
 async function offShelf(bike) {
-  await new Promise(r => setTimeout(r, 300))
-  bike.bike_status = 3
+  const res = await api.offShelfBike(bike.id)
+  bike.bike_status = res.data.bike_status
   ElMessage.success('已下架')
 }
 async function reOnShelf(bike) {
-  await new Promise(r => setTimeout(r, 300))
-  bike.bike_status = 1
+  const res = await api.onShelfBike(bike.id)
+  bike.bike_status = res.data.bike_status
   ElMessage.success('已重新上架')
 }
 async function deleteBike(bike) {
-  await new Promise(r => setTimeout(r, 300))
+  await api.deleteBike(bike.id)
   bikes.value = bikes.value.filter(b => b.id !== bike.id)
   ElMessage.success('已删除（逻辑删除）')
 }

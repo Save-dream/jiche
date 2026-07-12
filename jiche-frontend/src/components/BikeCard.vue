@@ -1,5 +1,5 @@
 <template>
-  <div class="bike-card" @click="$router.push(`/bike/${bike.id}`)">
+  <div class="bike-card" @click="goDetail">
     <!-- 封面图 -->
     <div class="bike-card__image-wrap">
       <img :src="bike.cover_image" :alt="bike.brand + bike.model" class="bike-card__image" loading="lazy" />
@@ -28,7 +28,7 @@
           <el-tag v-if="bike.negotiable" size="small" type="warning">可议价</el-tag>
         </div>
       </div>
-      <div class="bike-card__shop" @click.stop="$router.push(`/shop/${bike.shop_id}`)">
+      <div class="bike-card__shop" @click.stop="router.push(`/shop/${bike.shop_id}`)">
         <el-icon><Shop /></el-icon>
         <span>{{ bike.shop_name }}</span>
       </div>
@@ -38,17 +38,44 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAuthStore, BIKE_STATUS } from '@/stores/auth'
+import api from '@/api'
 
 const props = defineProps({
   bike: { type: Object, required: true },
 })
 
+const router = useRouter()
 const auth = useAuthStore()
 const isFav = computed(() => auth.isFavorite(props.bike.id))
 
-function handleFavorite() {
-  auth.toggleFavorite(props.bike.id)
+function goDetail() {
+  router.push({ path: `/bike/${props.bike.id}`, query: { shop_id: props.bike.shop_id } })
+}
+
+async function handleFavorite() {
+  if (!auth.isLoggedIn) {
+    ElMessage.warning('请先登录后收藏')
+    router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  if (auth.isFavorite(props.bike.id)) {
+    try {
+      await auth.toggleFavorite(props.bike.id, api)
+      ElMessage.success('已取消收藏')
+    } catch { /* ignore */ }
+    return
+  }
+  try {
+    const result = await auth.toggleFavorite(props.bike.id, api)
+    if (result === 'already') {
+      ElMessage.warning('已在收藏夹中')
+    } else {
+      ElMessage.success('已加入收藏')
+    }
+  } catch { /* ignore */ }
 }
 
 function formatPrice(price) {

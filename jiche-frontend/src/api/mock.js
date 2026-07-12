@@ -100,7 +100,9 @@ export const mockBikes = [
     delivery_method: '支持自提/物流',
     after_sale: '7天质量问题退换',
     fee_note: '过户费买方承担',
+    published_at: '2024-02-10',
     created_at: '2024-01-15',
+    is_deleted: 0,
     view_count: 256,
   },
   {
@@ -132,7 +134,9 @@ export const mockBikes = [
     delivery_method: '支持自提',
     after_sale: '包过户',
     fee_note: '含过户',
+    published_at: '2024-02-08',
     created_at: '2024-01-20',
+    is_deleted: 0,
     view_count: 189,
   },
   {
@@ -161,7 +165,9 @@ export const mockBikes = [
     delivery_method: '支持自提/物流',
     after_sale: '协商',
     fee_note: '过户另算',
+    published_at: '2024-01-28',
     created_at: '2024-02-01',
+    is_deleted: 0,
     view_count: 312,
   },
   {
@@ -190,52 +196,131 @@ export const mockBikes = [
     delivery_method: '仅自提',
     after_sale: '无',
     fee_note: '无过户',
+    published_at: '2024-01-05',
     created_at: '2024-01-05',
+    is_deleted: 0,
     view_count: 520,
+  },
+  {
+    id: 5,
+    shop_id: 1,
+    shop_name: '极速摩托行',
+    brand: '春风',
+    model: '450SR',
+    year: 2023,
+    displacement: '450cc',
+    mileage: 5000,
+    price: 32000,
+    can_transfer: true,
+    negotiable: true,
+    bike_status: 1,
+    cover_image: placeholder('450SR', 400, 300),
+    images: [placeholder('450SR', 800, 600)],
+    engine_status: '原厂',
+    suspension_status: '正常',
+    brake_status: '正常',
+    electrical_status: '正常',
+    frame_status: '无事故',
+    modification: '无',
+    defects: '无',
+    maintenance: '保养良好',
+    delivery_method: '自提',
+    after_sale: '',
+    fee_note: '',
+    published_at: '2024-01-10',
+    created_at: '2024-01-10',
+    is_deleted: 1,
+    view_count: 88,
+  },
+  {
+    id: 6,
+    shop_id: 1,
+    shop_name: '极速摩托行',
+    brand: '杜卡迪',
+    model: 'Monster',
+    year: 2020,
+    displacement: '821cc',
+    mileage: 15000,
+    price: 68000,
+    can_transfer: true,
+    negotiable: false,
+    bike_status: 4,
+    cover_image: placeholder('Monster', 400, 300),
+    images: [placeholder('Monster', 800, 600)],
+    engine_status: '原厂',
+    suspension_status: '正常',
+    brake_status: '正常',
+    electrical_status: '正常',
+    frame_status: '无事故',
+    modification: '无',
+    defects: '无',
+    maintenance: '有记录',
+    delivery_method: '自提',
+    after_sale: '',
+    fee_note: '',
+    published_at: '2024-01-08',
+    created_at: '2024-01-08',
+    is_deleted: 0,
+    view_count: 45,
   },
 ]
 
-export const mockMessages = [
+// 多轮留言会话
+export const mockMessageThreads = [
   {
     id: 1,
     bike_id: 1,
-    bike_info: 'CB400 2021年',
-    user_id: 101,
-    user_name: '用户张三',
-    content: '请问这辆车可以试驾吗？',
-    contact_phone: '13512345678',
-    message_status: 3,
-    reply_content: '可以的，请提前预约，地址：广州天河区车陂路168号',
-    created_at: '2024-02-10 14:30',
-    replied_at: '2024-02-10 16:00',
+    shop_id: 1,
+    user_id: 100,
+    user_name: '普通用户',
+    bike_info: '本田 CB400 2021年',
+    thread_status: 1,
+    unread_count_user: 1,
+    unread_count_shop: 0,
+    contact_phone: '13600000001',
+    updated_at: '2024-02-14 10:30',
+    messages: [
+      { id: 1, sender_type: 1, content: '请问这辆车可以试驾吗？', created_at: '2024-02-10 14:30' },
+      { id: 2, sender_type: 2, content: '可以的，请提前预约，地址：广州天河区车陂路168号', created_at: '2024-02-10 16:00' },
+      { id: 3, sender_type: 1, content: '好的，这周末方便吗？', created_at: '2024-02-14 10:30' },
+    ],
   },
   {
     id: 2,
     bike_id: 1,
-    bike_info: 'CB400 2021年',
+    shop_id: 1,
     user_id: 102,
     user_name: '用户李四',
-    content: '车子还在吗？价格可以再优惠一点吗？',
+    bike_info: '本田 CB400 2021年',
+    thread_status: 1,
+    unread_count_user: 0,
+    unread_count_shop: 1,
     contact_phone: '',
-    message_status: 1,
-    reply_content: '',
-    created_at: '2024-02-12 09:15',
-    replied_at: '',
+    updated_at: '2024-02-12 09:15',
+    messages: [
+      { id: 4, sender_type: 1, content: '车子还在吗？价格可以再优惠一点吗？', created_at: '2024-02-12 09:15' },
+    ],
   },
   {
     id: 3,
     bike_id: 2,
-    bike_info: 'MT-07 2022年',
+    shop_id: 1,
     user_id: 103,
     user_name: '用户王五',
-    content: '改装排气有没有影响保险？',
+    bike_info: '雅马哈 MT-07 2022年',
+    thread_status: 2,
+    unread_count_user: 0,
+    unread_count_shop: 0,
     contact_phone: '13987654321',
-    message_status: 2,
-    reply_content: '',
-    created_at: '2024-02-11 20:00',
-    replied_at: '',
+    updated_at: '2024-02-11 20:00',
+    messages: [
+      { id: 5, sender_type: 1, content: '改装排气有没有影响保险？', created_at: '2024-02-11 20:00' },
+    ],
   },
 ]
+
+// 兼容旧引用
+export const mockMessages = mockMessageThreads
 
 export const mockShopApplications = [
   {
@@ -272,64 +357,194 @@ export const mockShopApplications = [
   },
 ]
 
+// ==================== 用户与登录 Mock（V1.2 多端微信登录） ====================
+
+export const mockUsers = [
+  { id: 100, nickname: '普通用户', phone: '13600000001', shop_status: 0, is_staff: false, is_super_staff: false, shop_id: null, unionid: 'union_100', mp_openid: 'mp_100', web_openid: null, avatar: placeholder('用户', 80, 80) },
+  { id: 101, nickname: '待审核商家', phone: '13600000002', shop_status: 1, is_staff: false, is_super_staff: false, shop_id: null, unionid: 'union_101', mp_openid: 'mp_101', web_openid: null, avatar: placeholder('待审', 80, 80) },
+  { id: 1, nickname: '极速摩托行老板', phone: '13800138001', shop_status: 2, is_staff: false, is_super_staff: false, shop_id: 1, unionid: 'union_1', mp_openid: 'mp_1', web_openid: null, avatar: placeholder('商家', 80, 80) },
+  { id: 999, nickname: '平台管理员', phone: '13999999999', shop_status: 0, is_staff: true, is_super_staff: true, shop_id: null, unionid: 'union_999', mp_openid: 'mp_999', web_openid: null, avatar: placeholder('管理', 80, 80) },
+  { id: 102, nickname: '用户李四', phone: '13700000002', shop_status: 0, is_staff: false, is_super_staff: false, shop_id: null, unionid: 'union_102', mp_openid: 'mp_102', web_openid: null, avatar: placeholder('李四', 80, 80) },
+]
+
+const loginTickets = new Map()
+let ticketSeq = 1
+
+function issueToken(userId) {
+  return `mock_token_${userId}_${Date.now()}`
+}
+
+function findUserByToken(token) {
+  if (!token) return null
+  const match = token.match(/^mock_token_(\d+)_/)
+  if (!match) return null
+  return mockUsers.find(u => u.id === Number(match[1])) || null
+}
+
+function sanitizeUser(u) {
+  if (!u) return null
+  const { unionid, mp_openid, web_openid, ...rest } = u
+  return rest
+}
+
 // ==================== 模拟延迟 ====================
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms))
 
-// ==================== API 模拟函数 ====================
-// 生产环境替换为真实 axios 调用
-
 const mockResponse = (data) => ({ code: 200, msg: 'success', data })
 
+function getVisibleShopBikes(shopId, { cEndOnly = false, statusFilter = 0 } = {}) {
+  let list = mockBikes.filter(b => b.shop_id === Number(shopId) && !b.is_deleted)
+  if (cEndOnly) {
+    list = list.filter(b => b.bike_status === 1 || b.bike_status === 2)
+  } else if (statusFilter !== 0) {
+    list = list.filter(b => b.bike_status === statusFilter)
+  }
+  return list.sort((a, b) => {
+    const order = (s) => (s === 1 ? 0 : s === 2 ? 1 : 2)
+    const diff = order(a.bike_status) - order(b.bike_status)
+    if (diff !== 0) return diff
+    return new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at)
+  })
+}
+
 export const mockApi = {
-  // 车辆列表（含筛选）
-  async getBikeList(params = {}) {
+  // C 端不再提供全平台列表（多租户）
+  async getBikeList() {
     await delay()
-    let list = mockBikes.filter(b => b.bike_status === 1)
-    if (params.brand) list = list.filter(b => b.brand === params.brand)
-    if (params.min_price) list = list.filter(b => b.price >= params.min_price)
-    if (params.max_price) list = list.filter(b => b.price <= params.max_price)
-    if (params.can_transfer !== undefined && params.can_transfer !== '') {
-      list = list.filter(b => b.can_transfer === (params.can_transfer === 'true'))
-    }
-    if (params.year) list = list.filter(b => b.year >= params.year)
-    return mockResponse({ list, total: list.length })
+    return mockResponse({ list: [], total: 0 })
   },
 
-  // 车辆详情
-  async getBikeDetail(id) {
+  async getBikeDetail(id, params = {}) {
     await delay()
     const bike = mockBikes.find(b => b.id === Number(id))
-    if (!bike) return { code: 404, msg: '车辆不存在', data: null }
+    if (!bike || bike.is_deleted) return { code: 404, msg: '车辆不存在或已删除', data: null }
+    if (params.shop_id && bike.shop_id !== Number(params.shop_id)) {
+      return { code: 403, msg: '无权查看该商家商品', data: null }
+    }
     const shop = mockShops.find(s => s.id === bike.shop_id)
     return mockResponse({ ...bike, shop })
   },
 
-  // 商家信息
-  async getShopDetail(id) {
+  async getShopDetail(id, params = {}) {
     await delay()
     const shop = mockShops.find(s => s.id === Number(id))
-    const bikes = mockBikes.filter(b => b.shop_id === Number(id))
+    if (!shop) return { code: 404, msg: '商家不存在', data: null }
+    const statusFilter = params.status ? Number(params.status) : 0
+    const bikes = getVisibleShopBikes(id, { cEndOnly: true, statusFilter })
     return mockResponse({ shop, bikes })
   },
 
-  // 商家自己的车源列表
-  async getMyBikes() {
+  async getMyBikes(params = {}) {
     await delay()
-    return mockResponse({ list: mockBikes.filter(b => b.shop_id === 1), total: mockBikes.filter(b => b.shop_id === 1).length })
-  },
-
-  // 留言列表（商家）
-  async getMyMessages(params = {}) {
-    await delay()
-    let list = mockMessages
-    if (params.status) list = list.filter(m => m.message_status === Number(params.status))
+    let list = mockBikes.filter(b => b.shop_id === 1 && !b.is_deleted)
+    const statusFilter = params.status ? Number(params.status) : 0
+    if (statusFilter !== 0) list = list.filter(b => b.bike_status === statusFilter)
+    list = list.sort((a, b) => {
+      const order = (s) => (s === 1 ? 0 : s === 2 ? 1 : 2)
+      const diff = order(a.bike_status) - order(b.bike_status)
+      if (diff !== 0) return diff
+      return new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at)
+    })
     return mockResponse({ list, total: list.length })
   },
 
-  // 所有留言（管理员）
+  async getMyMessageThreads(params = {}) {
+    await delay()
+    let list = mockMessageThreads.filter(t => t.shop_id === 1)
+    if (params.status) {
+      list = list.filter(t => t.thread_status === Number(params.status))
+    }
+    return mockResponse({ list, total: list.length })
+  },
+
+  async getMyMessages(params = {}) {
+    return this.getMyMessageThreads(params)
+  },
+
+  async getUserMessageThreads(userId = 100) {
+    await delay()
+    const list = mockMessageThreads.filter(t => t.user_id === userId)
+    return mockResponse({ list, total: list.length })
+  },
+
+  async getMessageThread(threadId) {
+    await delay()
+    const thread = mockMessageThreads.find(t => t.id === Number(threadId))
+    if (!thread) return { code: 404, msg: '会话不存在', data: null }
+    return mockResponse(thread)
+  },
+
+  async sendMessage(threadId, { content, sender_type }) {
+    await delay()
+    const thread = mockMessageThreads.find(t => t.id === Number(threadId))
+    if (!thread) return { code: 404, msg: '会话不存在', data: null }
+    const msg = {
+      id: Date.now(),
+      sender_type,
+      content,
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    }
+    thread.messages.push(msg)
+    thread.updated_at = msg.created_at
+    if (sender_type === 1) {
+      thread.unread_count_shop = (thread.unread_count_shop || 0) + 1
+      thread.thread_status = 1
+    } else {
+      thread.unread_count_user = (thread.unread_count_user || 0) + 1
+      thread.thread_status = 3
+    }
+    return mockResponse({ message: msg, thread })
+  },
+
+  async createMessageThread({ bike_id, content, contact_phone, user_id = 100, user_name = '普通用户' }) {
+    await delay()
+    const bike = mockBikes.find(b => b.id === Number(bike_id))
+    if (!bike) return { code: 404, msg: '车辆不存在', data: null }
+    let thread = mockMessageThreads.find(t => t.bike_id === bike.id && t.user_id === user_id)
+    if (thread) {
+      await this.sendMessage(thread.id, { content, sender_type: 1 })
+      return mockResponse(thread)
+    }
+    thread = {
+      id: mockMessageThreads.length + 1,
+      bike_id: bike.id,
+      shop_id: bike.shop_id,
+      user_id,
+      user_name,
+      bike_info: `${bike.brand} ${bike.model} ${bike.year}年`,
+      thread_status: 1,
+      unread_count_user: 0,
+      unread_count_shop: 1,
+      contact_phone: contact_phone || '',
+      updated_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      messages: [{ id: Date.now(), sender_type: 1, content, created_at: new Date().toLocaleString('zh-CN', { hour12: false }) }],
+    }
+    mockMessageThreads.push(thread)
+    return mockResponse(thread)
+  },
+
+  async markThreadRead(threadId, role = 'user') {
+    await delay()
+    const thread = mockMessageThreads.find(t => t.id === Number(threadId))
+    if (!thread) return { code: 404, msg: '会话不存在', data: null }
+    if (role === 'user') thread.unread_count_user = 0
+    else thread.unread_count_shop = 0
+    return mockResponse(thread)
+  },
+
+  async getFavorites(favoriteIds = []) {
+    await delay()
+    const list = favoriteIds.map(id => {
+      const bike = mockBikes.find(b => b.id === id)
+      if (!bike) return { id, unavailable: true, brand: '未知', model: '车辆', is_deleted: 1 }
+      return { ...bike }
+    })
+    return mockResponse({ list, total: list.length })
+  },
+
   async getAllMessages() {
     await delay()
-    return mockResponse({ list: mockMessages, total: mockMessages.length })
+    return mockResponse({ list: mockMessageThreads, total: mockMessageThreads.length })
   },
 
   // 所有商家申请（管理员）
@@ -367,11 +582,12 @@ export const mockApi = {
   // 统计数据（商家）
   async getShopStats() {
     await delay()
+    const shopBikes = mockBikes.filter(b => b.shop_id === 1 && !b.is_deleted)
     return mockResponse({
-      on_sale: 3,
-      sold: 1,
-      unread_messages: 2,
-      total_views: 1277,
+      on_sale: shopBikes.filter(b => b.bike_status === 1).length,
+      sold: shopBikes.filter(b => b.bike_status === 2).length,
+      unread_messages: mockMessageThreads.filter(t => t.shop_id === 1).reduce((s, t) => s + (t.unread_count_shop || 0), 0),
+      total_views: shopBikes.reduce((s, b) => s + b.view_count, 0),
     })
   },
 
@@ -384,5 +600,88 @@ export const mockApi = {
       total_bikes: 4,
       total_messages: 3,
     })
+  },
+
+  // ==================== 认证（V1.2） ====================
+
+  async createLoginTicket() {
+    await delay(200)
+    const ticketId = `T${String(ticketSeq++).padStart(6, '0')}`
+    const ticket = {
+      ticket_id: ticketId,
+      status: 'pending',
+      qr_url: placeholder('微信扫码\n登录', 220, 220, '#ffffff', '#07c160'),
+      expires_at: Date.now() + 5 * 60 * 1000,
+      user_id: null,
+    }
+    loginTickets.set(ticketId, ticket)
+    return mockResponse(ticket)
+  },
+
+  async pollLoginTicket(ticketId) {
+    await delay(80)
+    const ticket = loginTickets.get(ticketId)
+    if (!ticket) return { code: 404, msg: '登录票据不存在', data: null }
+    if (Date.now() > ticket.expires_at && ticket.status !== 'confirmed') {
+      ticket.status = 'expired'
+    }
+    if (ticket.status === 'confirmed') {
+      const user = mockUsers.find(u => u.id === ticket.user_id)
+      if (!user) return { code: 500, msg: '用户不存在', data: null }
+      user.web_openid = user.web_openid || `web_${user.id}`
+      user.last_login_platform = 'web'
+      const token = issueToken(user.id)
+      loginTickets.delete(ticketId)
+      return mockResponse({ status: 'confirmed', token, user: sanitizeUser(user) })
+    }
+    return mockResponse({ status: ticket.status })
+  },
+
+  async simulateScanLogin(ticketId, userId = 100) {
+    await delay(400)
+    const ticket = loginTickets.get(ticketId)
+    if (!ticket) return { code: 404, msg: '登录票据不存在', data: null }
+    if (ticket.status === 'expired') return { code: 410, msg: '二维码已过期', data: null }
+    ticket.status = 'scanned'
+    await delay(300)
+    ticket.status = 'confirmed'
+    ticket.user_id = Number(userId)
+    return mockResponse({ ok: true })
+  },
+
+  async getUserInfo() {
+    await delay(100)
+    const token = localStorage.getItem('token')
+    const user = findUserByToken(token)
+    if (!user) return { code: 401, msg: '未登录或登录已过期', data: null }
+    return mockResponse(sanitizeUser(user))
+  },
+
+  async logout() {
+    await delay(100)
+    return mockResponse(null)
+  },
+
+  async getAdminUsers() {
+    await delay()
+    return mockResponse({ list: mockUsers.map(sanitizeUser), total: mockUsers.length })
+  },
+
+  async grantStaff(userId) {
+    await delay()
+    const user = mockUsers.find(u => u.id === Number(userId))
+    if (!user) return { code: 404, msg: '用户不存在', data: null }
+    user.is_staff = true
+    user.staff_granted_at = new Date().toISOString()
+    return mockResponse(sanitizeUser(user))
+  },
+
+  async revokeStaff(userId) {
+    await delay()
+    const user = mockUsers.find(u => u.id === Number(userId))
+    if (!user) return { code: 404, msg: '用户不存在', data: null }
+    if (user.is_super_staff) return { code: 403, msg: '预置超级管理员不可撤销', data: null }
+    user.is_staff = false
+    return mockResponse(sanitizeUser(user))
   },
 }

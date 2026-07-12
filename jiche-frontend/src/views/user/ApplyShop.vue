@@ -2,23 +2,34 @@
   <div>
     <el-breadcrumb separator="/" class="mb-3">
       <el-breadcrumb-item :to="{ path: '/profile' }">个人中心</el-breadcrumb-item>
-      <el-breadcrumb-item>商家入驻申请</el-breadcrumb-item>
+      <el-breadcrumb-item>{{ pageTitle }}</el-breadcrumb-item>
     </el-breadcrumb>
 
     <!-- 待审核提示 -->
     <el-alert v-if="auth.shopStatus === 1" type="warning" show-icon :closable="false" class="mb-4"
-      title="您的申请正在审核中" description="请耐心等待，审核结果将在1-3个工作日内反馈。审核期间无法重新提交。" />
+      title="您的申请正在审核中" description="请耐心等待，审核结果将在1-3个工作日内反馈。审核期间无法修改或重新提交。" />
 
     <!-- 驳回提示 -->
     <el-alert v-if="auth.shopStatus === 3 && rejectReason" type="error" show-icon :closable="false" class="mb-4"
       title="申请已被驳回" :description="`驳回原因：${rejectReason}，请修改后重新提交。`" />
 
-    <div class="card">
-      <div class="card-header">商家入驻申请</div>
-      <div class="card-body">
-        <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" :disabled="auth.shopStatus === 1 || auth.shopStatus === 4">
+    <!-- 已入驻提示 -->
+    <el-alert v-if="auth.shopStatus === 2" type="success" show-icon :closable="false" class="mb-4"
+      title="您已是入驻商家" description="可进入商家后台发布车源。" />
+
+    <div class="card" v-if="auth.shopStatus !== 2">
+      <div class="card-header flex-between">
+        <span>{{ pageTitle }}</span>
+        <span v-if="appliedAt" class="applied-at">提交时间：{{ appliedAt }}</span>
+      </div>
+      <div class="card-body" v-loading="pageLoading">
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" :disabled="isReadOnly">
 
           <div class="form-section-title">基本信息</div>
+
+          <el-form-item label="商家名称" prop="name">
+            <el-input v-model="form.name" placeholder="2-64 字，如：极速机车行" maxlength="64" style="width:400px" show-word-limit />
+          </el-form-item>
 
           <el-form-item label="入驻类型" prop="shop_type">
             <el-select v-model="form.shop_type" placeholder="请选择入驻类型" style="width:200px">
@@ -53,14 +64,14 @@
             <div class="upload-area">
               <div v-if="form.wechat_qrcode_preview" class="preview-wrap">
                 <img :src="form.wechat_qrcode_preview" class="upload-image-preview" />
-                <el-button size="small" type="danger" plain @click="form.wechat_qrcode_preview = ''; form.wechat_qrcode = null">删除</el-button>
+                <el-button v-if="!isReadOnly" size="small" type="danger" plain @click="clearQR">删除</el-button>
               </div>
-              <label v-else class="upload-btn">
+              <label v-else-if="!isReadOnly" class="upload-btn">
                 <input type="file" accept="image/jpeg,image/png" @change="handleQRUpload" hidden />
                 <el-icon><Plus /></el-icon>
                 <span>上传微信二维码</span>
               </label>
-              <div class="upload-tip">格式：jpg/png，大小≤5M</div>
+              <div v-if="!isReadOnly" class="upload-tip">格式：jpg/png，大小≤5M</div>
             </div>
           </el-form-item>
 
@@ -68,28 +79,28 @@
             <div class="upload-area">
               <div v-if="form.qualification_photo_preview" class="preview-wrap">
                 <img :src="form.qualification_photo_preview" class="upload-image-preview" />
-                <el-button size="small" type="danger" plain @click="form.qualification_photo_preview = ''; form.qualification_photo = null">删除</el-button>
+                <el-button v-if="!isReadOnly" size="small" type="danger" plain @click="clearQual">删除</el-button>
               </div>
-              <label v-else class="upload-btn">
+              <label v-else-if="!isReadOnly" class="upload-btn">
                 <input type="file" accept="image/jpeg,image/png" @change="handleQualUpload" hidden />
                 <el-icon><Plus /></el-icon>
                 <span>上传资质照片</span>
               </label>
-              <div class="upload-tip">
+              <div v-if="!isReadOnly" class="upload-tip">
                 {{ form.shop_type === '企业商户' ? '企业商户必填（营业执照等）' : '个人商户选填' }}
               </div>
             </div>
           </el-form-item>
 
-          <el-form-item>
+          <el-form-item v-if="!isReadOnly">
             <el-button
               type="primary"
               size="large"
               :loading="submitting"
-              :disabled="auth.shopStatus === 1 || auth.shopStatus === 4"
+              :disabled="auth.shopStatus === 4"
               @click="submit"
             >
-              {{ auth.shopStatus === 1 ? '审核中（不可重复提交）' : '提交申请' }}
+              提交申请
             </el-button>
           </el-form-item>
 
@@ -100,16 +111,22 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/api'
 
 const auth = useAuthStore()
+const router = useRouter()
 const formRef = ref()
 const submitting = ref(false)
-const rejectReason = ref('资质材料不清晰，请重新上传')
+const pageLoading = ref(false)
+const rejectReason = ref('')
+const appliedAt = ref('')
 
 const form = reactive({
+  name: '',
   shop_type: '',
   contact_name: '',
   phone: '',
@@ -118,11 +135,17 @@ const form = reactive({
   description: '',
   wechat_qrcode: null,
   wechat_qrcode_preview: '',
+  wechat_qrcode_url: '',
   qualification_photo: null,
   qualification_photo_preview: '',
+  qualification_photo_url: '',
 })
 
 const rules = {
+  name: [
+    { required: true, message: '请填写商家名称', trigger: 'blur' },
+    { min: 2, max: 64, message: '商家名称长度为 2-64 字', trigger: 'blur' },
+  ],
   shop_type: [{ required: true, message: '请选择入驻类型', trigger: 'change' }],
   contact_name: [
     { required: true, message: '请填写联系人姓名', trigger: 'blur' },
@@ -132,6 +155,69 @@ const rules = {
     { required: true, message: '请填写联系电话', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请填写正确的手机号', trigger: 'blur' },
   ],
+}
+
+const isReadOnly = computed(() => auth.shopStatus === 1 || auth.shopStatus === 4)
+
+const pageTitle = computed(() => {
+  if (auth.shopStatus === 1) return '申请详情（审核中）'
+  if (auth.shopStatus === 3) return '修改入驻申请'
+  return '商家入驻申请'
+})
+
+function mediaUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url
+  return url.startsWith('/') ? url : `/${url}`
+}
+
+function fillFromApplication(app) {
+  if (!app) return
+  form.name = app.name || form.name
+  form.shop_type = app.shop_type || form.shop_type
+  form.contact_name = app.contact_name || form.contact_name
+  form.phone = app.phone || form.phone
+  form.address = app.address || ''
+  form.main_models = app.main_models || ''
+  form.description = app.description || ''
+  appliedAt.value = app.applied_at || ''
+  if (app.wechat_qrcode) {
+    form.wechat_qrcode_url = app.wechat_qrcode
+    form.wechat_qrcode_preview = mediaUrl(app.wechat_qrcode)
+  }
+  if (app.qualification_photo) {
+    form.qualification_photo_url = app.qualification_photo
+    form.qualification_photo_preview = mediaUrl(app.qualification_photo)
+  }
+  rejectReason.value = app.reject_reason || ''
+}
+
+async function loadMyApplication() {
+  try {
+    const res = await api.getMyApplication()
+    if (res.data) {
+      fillFromApplication(res.data)
+      // 以申请记录同步入驻状态，避免本地缓存滞后
+      if (auth.user && res.data.shop_status != null && auth.user.shop_status !== res.data.shop_status) {
+        auth.setUser({ ...auth.user, shop_status: res.data.shop_status })
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+async function initPage() {
+  if (!auth.isLoggedIn) return
+  if (auth.isAdmin) {
+    router.replace('/admin/audit')
+    return
+  }
+  pageLoading.value = true
+  try {
+    await auth.refreshUser(api)
+    await loadMyApplication()
+  } finally {
+    pageLoading.value = false
+  }
 }
 
 function handleFile(e, previewKey, fileKey) {
@@ -144,25 +230,70 @@ function handleFile(e, previewKey, fileKey) {
 function handleQRUpload(e) { handleFile(e, 'wechat_qrcode_preview', 'wechat_qrcode') }
 function handleQualUpload(e) { handleFile(e, 'qualification_photo_preview', 'qualification_photo') }
 
+function clearQR() {
+  form.wechat_qrcode = null
+  form.wechat_qrcode_preview = ''
+  form.wechat_qrcode_url = ''
+}
+function clearQual() {
+  form.qualification_photo = null
+  form.qualification_photo_preview = ''
+  form.qualification_photo_url = ''
+}
+
+async function uploadIfNeeded(file, existingUrl) {
+  if (file) {
+    const res = await api.uploadImage(file)
+    return res.data.url
+  }
+  return existingUrl || ''
+}
+
 async function submit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
-  if (!form.wechat_qrcode) { ElMessage.error('请上传微信二维码'); return }
-  if (form.shop_type === '企业商户' && !form.qualification_photo) { ElMessage.error('企业商户必须上传资质照片'); return }
+  if (!form.wechat_qrcode && !form.wechat_qrcode_url) {
+    ElMessage.error('请上传微信二维码')
+    return
+  }
+  if (form.shop_type === '企业商户' && !form.qualification_photo && !form.qualification_photo_url) {
+    ElMessage.error('企业商户必须上传资质照片')
+    return
+  }
+
   submitting.value = true
   try {
-    await new Promise(r => setTimeout(r, 800))
-    auth.switchRole('pending')
+    const wechat_qrcode = await uploadIfNeeded(form.wechat_qrcode, form.wechat_qrcode_url)
+    const qualification_photo = await uploadIfNeeded(form.qualification_photo, form.qualification_photo_url)
+    const res = await api.submitApplication({
+      name: form.name.trim(),
+      shop_type: form.shop_type,
+      contact_name: form.contact_name,
+      phone: form.phone,
+      address: form.address,
+      main_models: form.main_models,
+      description: form.description,
+      wechat_qrcode,
+      qualification_photo: qualification_photo || '',
+    })
+    auth.setUser(res.data.user)
+    fillFromApplication(res.data.application)
+    rejectReason.value = ''
     ElMessage.success('申请提交成功！请等待平台审核。')
   } finally {
     submitting.value = false
   }
 }
+
+onMounted(initPage)
 </script>
 
 <style scoped>
+.flex-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.applied-at { font-size: 12px; color: #888; font-weight: normal; }
 .upload-area { display: flex; flex-direction: column; gap: 8px; }
 .preview-wrap { display: flex; align-items: center; gap: 10px; }
+.upload-image-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
 .upload-btn {
   display: flex;
   flex-direction: column;

@@ -61,13 +61,13 @@ async function loadData() {
 }
 
 async function banShop(row) {
-  await new Promise(r => setTimeout(r, 400))
-  row.shop_status = 4
+  const res = await api.banShop(row.id)
+  row.shop_status = res.data.shop_status
   ElMessage.success('商户已封禁')
 }
 async function unbanShop(row) {
-  await new Promise(r => setTimeout(r, 400))
-  row.shop_status = 2
+  const res = await api.unbanShop(row.id)
+  row.shop_status = res.data.shop_status
   ElMessage.success('封禁已解除')
 }
 
