@@ -72,8 +72,12 @@ echo_info "执行数据库迁移..."
 cd "$BACKEND_DIR"
 "$PYTHON" manage.py migrate --noinput
 
+# 初始化登录账号（账号密码，不含演示车源等业务数据）
+echo_info "初始化登录账号..."
+"$PYTHON" manage.py create_init_accounts --reset-password
+
 if [[ "$DO_SEED" -eq 1 ]]; then
-  echo_info "写入演示数据..."
+  echo_warn "--seed 将写入演示业务数据（品牌/车源/留言），生产环境不建议使用"
   "$PYTHON" manage.py seed_auth_demo || true
   "$PYTHON" manage.py seed_catalog || true
   "$PYTHON" manage.py seed_demo_data || true

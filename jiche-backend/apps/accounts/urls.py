@@ -3,6 +3,7 @@ from django.urls import path
 from apps.accounts import views
 
 urlpatterns = [
+    path('auth/login/', views.PasswordLoginView.as_view(), name='auth-password-login'),
     path('auth/wx-mini/login/', views.WxMiniLoginView.as_view(), name='auth-wx-mini-login'),
     path('auth/login-ticket/', views.CreateLoginTicketView.as_view(), name='auth-login-ticket-create'),
     path('auth/login-ticket/<str:ticket_id>/', views.PollLoginTicketView.as_view(), name='auth-login-ticket-poll'),

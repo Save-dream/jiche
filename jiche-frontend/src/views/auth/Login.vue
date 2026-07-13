@@ -6,38 +6,60 @@
         <span class="logo-text">极车</span>
       </router-link>
 
-      <h1 class="login-title">微信扫码登录</h1>
-      <p class="login-desc">使用微信扫码，与小程序账号互通，无需注册</p>
+      <h1 class="login-title">账号登录</h1>
+      <p class="login-desc">使用管理员下发的账号密码登录（暂未开通微信扫码）</p>
 
-      <div class="qr-wrap" v-loading="creating">
-        <template v-if="ticket">
-          <img :src="ticket.qr_url" alt="微信登录二维码" class="qr-image" />
-          <p class="qr-status">
-            <el-icon v-if="status === 'pending'" class="is-loading"><Loading /></el-icon>
-            {{ statusText }}
-          </p>
-          <p class="qr-expire" v-if="ticket">二维码 {{ expireMinutes }} 分钟内有效</p>
-        </template>
-      </div>
-
-      <div class="login-actions">
-        <el-button v-if="status === 'expired'" type="primary" @click="initTicket">刷新二维码</el-button>
-        <el-button v-if="showDevTools && ticket" type="warning" plain @click="simulateScan">
-          [Dev] 模拟扫码成功
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-position="top"
+        class="login-form"
+        @submit.prevent
+      >
+        <el-form-item label="账号" prop="username">
+          <el-input
+            v-model="form.username"
+            placeholder="请输入账号"
+            size="large"
+            clearable
+            autocomplete="username"
+            @keyup.enter="onSubmit"
+          />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input
+            v-model="form.password"
+            type="password"
+            placeholder="请输入密码"
+            size="large"
+            show-password
+            autocomplete="current-password"
+            @keyup.enter="onSubmit"
+          />
+        </el-form-item>
+        <el-button
+          type="primary"
+          size="large"
+          class="login-btn"
+          :loading="loading"
+          @click="onSubmit"
+        >
+          登录
         </el-button>
-      </div>
+      </el-form>
 
       <ul class="login-tips">
-        <li>电脑端与微信小程序使用同一微信账号，数据自动同步</li>
-        <li>收藏、咨询记录、最近访问商家在多端共享</li>
-        <li>平台不支持前台注册，管理员由后台预置或授权</li>
+        <li>请使用管理员分配的账号，暂不支持自助注册</li>
+        <li>商家账号登录后可进入「商家后台」配置店铺与车源</li>
+        <li>管理员账号可进入「管理中心」审核与管控</li>
       </ul>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
@@ -47,78 +69,42 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const showDevTools = ref(true)
-const creating = ref(false)
-const ticket = ref(null)
-const status = ref('pending')
-let pollTimer = null
-
-const expireMinutes = 5
-
-const statusText = computed(() => {
-  if (status.value === 'pending') return '请使用微信扫描二维码'
-  if (status.value === 'scanned') return '扫码成功，请在手机上确认'
-  if (status.value === 'expired') return '二维码已过期，请刷新'
-  return '登录中...'
+const formRef = ref(null)
+const loading = ref(false)
+const form = reactive({
+  username: '',
+  password: '',
 })
 
-async function initTicket() {
-  stopPoll()
-  creating.value = true
-  status.value = 'pending'
+const rules = {
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+}
+
+async function onSubmit() {
+  if (!formRef.value) return
   try {
-    const res = await api.createLoginTicket()
-    ticket.value = res.data
-    startPoll()
+    await formRef.value.validate()
   } catch {
-    ElMessage.error('获取登录二维码失败')
+    return
+  }
+  loading.value = true
+  try {
+    const res = await api.passwordLogin({
+      username: form.username.trim(),
+      password: form.password,
+    })
+    auth.loginSession({ token: res.data.token, user: res.data.user })
+    await auth.loadUnreadMessages(api)
+    ElMessage.success('登录成功')
+    const redirect = route.query.redirect || '/'
+    router.replace(typeof redirect === 'string' ? redirect : '/')
+  } catch {
+    /* 错误由 axios 拦截器提示 */
   } finally {
-    creating.value = false
+    loading.value = false
   }
 }
-
-function startPoll() {
-  stopPoll()
-  pollTimer = setInterval(pollOnce, 2000)
-}
-
-function stopPoll() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
-}
-
-async function pollOnce() {
-  if (!ticket.value?.ticket_id) return
-  try {
-    const res = await api.pollLoginTicket(ticket.value.ticket_id)
-    const data = res.data
-    status.value = data.status
-    if (data.status === 'confirmed') {
-      stopPoll()
-      auth.loginSession({ token: data.token, user: data.user })
-      await auth.loadUnreadMessages(api)
-      ElMessage.success('登录成功')
-      const redirect = route.query.redirect || '/'
-      router.replace(typeof redirect === 'string' ? redirect : '/')
-    }
-    if (data.status === 'expired') stopPoll()
-  } catch { /* ignore */ }
-}
-
-async function simulateScan() {
-  if (!ticket.value?.ticket_id) return
-  try {
-    await api.simulateScanLogin(ticket.value.ticket_id)
-    await pollOnce()
-  } catch {
-    ElMessage.error('模拟扫码失败')
-  }
-}
-
-onMounted(initTicket)
-onUnmounted(stopPoll)
 </script>
 
 <style scoped>
@@ -158,42 +144,13 @@ onUnmounted(stopPoll)
   color: #888;
   margin: 0 0 24px;
 }
-.qr-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 280px;
-  justify-content: center;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 24px;
-  background: #fafafa;
+.login-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #555;
 }
-.qr-image {
-  width: 220px;
-  height: 220px;
-  border-radius: 8px;
-  border: 1px solid #eee;
-}
-.qr-status {
-  margin: 16px 0 4px;
-  font-size: 14px;
-  color: #07c160;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.qr-expire {
-  font-size: 12px;
-  color: #aaa;
-  margin: 0;
-}
-.login-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 20px;
+.login-btn {
+  width: 100%;
+  margin-top: 8px;
 }
 .login-tips {
   margin: 28px 0 0;

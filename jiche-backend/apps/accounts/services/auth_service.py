@@ -234,6 +234,29 @@ class AuthService:
         )
         return user
 
+    def password_login(self, username: str, password: str) -> dict:
+        username = (username or '').strip()
+        if not username or not password:
+            raise ValueError('请输入账号和密码')
+        user = User.objects.filter(
+            internal_username=username,
+            is_deleted=False,
+        ).first()
+        if user is None or not user.check_password(password):
+            raise ValueError('账号或密码错误')
+        if not user.is_active:
+            raise ValueError('账号已禁用')
+        if user.shop_status == User.ShopStatus.BANNED and not user.is_staff:
+            # 封禁商家仍可登录 C 端浏览；后台路由由前端拦截
+            pass
+        self.update_login_meta(user, User.LoginPlatform.WEB)
+        tokens = self.issue_tokens(user)
+        return {
+            'token': tokens['token'],
+            'refresh_token': tokens['refresh_token'],
+            'user': self.serialize_user(user),
+        }
+
     def grant_staff(self, operator: User, target: User) -> User:
         if not operator.is_platform_admin:
             raise PermissionError('需要管理员权限')

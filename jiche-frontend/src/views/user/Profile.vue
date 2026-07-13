@@ -6,7 +6,7 @@
         <el-icon size="56" color="#07c160"><UserFilled /></el-icon>
         <h3>登录后使用完整功能</h3>
         <p>微信扫码登录，与小程序账号互通，收藏与咨询数据多端同步</p>
-        <el-button type="primary" size="large" @click="goLogin">微信扫码登录</el-button>
+        <el-button type="primary" size="large" @click="goLogin">账号登录</el-button>
       </div>
     </div>
 

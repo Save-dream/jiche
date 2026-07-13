@@ -31,3 +31,8 @@ class LoginTicketConfirmSerializer(serializers.Serializer):
 
 class SimulateScanSerializer(serializers.Serializer):
     user_id = serializers.IntegerField(required=False)
+
+
+class PasswordLoginSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=64)
+    password = serializers.CharField(max_length=128, write_only=True)

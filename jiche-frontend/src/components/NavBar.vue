@@ -20,7 +20,7 @@
 
       <!-- 右侧操作区 -->
       <div class="navbar__actions">
-        <!-- 调试角色切换（开发用） -->
+        <!-- 调试角色切换：仅 Vite 开发模式显示 -->
         <el-dropdown v-if="showDevTools && !isMobile" @command="handleSwitchRole" class="dev-switcher">
           <el-button size="small" type="warning" plain>
             [Dev] {{ roleLabel }} <el-icon><ArrowDown /></el-icon>
@@ -62,7 +62,7 @@
           </router-link>
         </template>
         <router-link v-else to="/login" class="navbar__login-btn">
-          <el-button type="primary" size="small" round>微信登录</el-button>
+          <el-button type="primary" size="small" round>登录</el-button>
         </router-link>
       </div>
     </div>
@@ -80,7 +80,7 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const isMobile = ref(false)
-const showDevTools = ref(true) // 开发调试用，生产关闭
+const showDevTools = ref(import.meta.env.DEV)
 
 function checkMobile() {
   isMobile.value = window.innerWidth <= 768

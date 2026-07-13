@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import IsAuthenticatedUser, IsPlatformAdmin
 from apps.accounts.serializers import (
     LoginTicketConfirmSerializer,
+    PasswordLoginSerializer,
     SimulateScanSerializer,
     UserPublicSerializer,
     WxMiniLoginSerializer,
@@ -93,6 +94,23 @@ class SimulateScanLoginView(APIView):
         except ValueError as exc:
             return error_response(str(exc), code=410)
         return success_response({'ok': True})
+
+
+class PasswordLoginView(APIView):
+    """账号密码登录（临时替代微信扫码）。"""
+
+    def post(self, request):
+        serializer = PasswordLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service = AuthService()
+        try:
+            data = service.password_login(
+                serializer.validated_data['username'],
+                serializer.validated_data['password'],
+            )
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(data)
 
 
 class MeView(APIView):

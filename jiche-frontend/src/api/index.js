@@ -57,6 +57,7 @@ const api = {
     request.post(`/auth/login-ticket/${ticketId}/simulate/`, userId ? { user_id: userId } : {}),
   logout: () => request.post('/auth/logout/'),
   getUserInfo: () => request.get('/auth/me/'),
+  passwordLogin: (data) => request.post('/auth/login/', data),
   devLogin: (role) => request.post('/auth/dev/login/', { role }),
   getAdminUsers: (params) => request.get('/admin/users/', { params }),
   grantStaff: (userId) => request.post(`/admin/users/${userId}/grant-staff/`),

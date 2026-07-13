@@ -6,20 +6,24 @@ from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, internal_username=None, **extra_fields):
+    def create_user(self, internal_username=None, password=None, **extra_fields):
         if not internal_username:
             internal_username = f'u_{uuid.uuid4().hex[:16]}'
         user = self.model(internal_username=internal_username, **extra_fields)
-        user.set_unusable_password()
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save(using=self._db)
         return user
 
-    def create_super_admin(self, unionid, nickname='平台管理员', phone=None, **extra_fields):
+    def create_super_admin(self, unionid, nickname='平台管理员', phone=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_super_staff', True)
         extra_fields.setdefault('is_active', True)
         return self.create_user(
             internal_username=f'admin_{unionid[:16]}',
+            password=password,
             unionid=unionid,
             nickname=nickname,
             phone=phone,
