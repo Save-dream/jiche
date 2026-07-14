@@ -10,22 +10,25 @@ const routes = [
     meta: { guestOnly: true },
   },
   {
+    // 短链解析页允许未登录访问，解析后再按目标页鉴权并带回跳
     path: '/s/:code',
     name: 'ShareRedirect',
     component: () => import('@/views/user/ShareRedirect.vue'),
+    meta: { allowAnonymous: true },
   },
   {
     path: '/',
     component: () => import('@/layouts/UserLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
       { path: '', name: 'Home', component: () => import('@/views/user/Home.vue') },
       { path: 'bike/:id', name: 'BikeDetail', component: () => import('@/views/user/BikeDetail.vue') },
       { path: 'shop/:id', name: 'ShopHome', component: () => import('@/views/user/ShopHome.vue') },
-      { path: 'favorites', name: 'Favorites', component: () => import('@/views/user/Favorites.vue'), meta: { requiresAuth: true } },
-      { path: 'messages', name: 'UserMessages', component: () => import('@/views/user/MyMessages.vue'), meta: { requiresAuth: true } },
-      { path: 'messages/:threadId', name: 'UserChat', component: () => import('@/views/user/ChatDetail.vue'), meta: { requiresAuth: true, chatRole: 'user' } },
+      { path: 'favorites', name: 'Favorites', component: () => import('@/views/user/Favorites.vue') },
+      { path: 'messages', name: 'UserMessages', component: () => import('@/views/user/MyMessages.vue') },
+      { path: 'messages/:threadId', name: 'UserChat', component: () => import('@/views/user/ChatDetail.vue'), meta: { chatRole: 'user' } },
       { path: 'profile', name: 'Profile', component: () => import('@/views/user/Profile.vue') },
-      { path: 'apply-shop', name: 'ApplyShop', component: () => import('@/views/user/ApplyShop.vue'), meta: { requiresAuth: true } },
+      { path: 'apply-shop', name: 'ApplyShop', component: () => import('@/views/user/ApplyShop.vue') },
     ],
   },
   {
@@ -66,15 +69,29 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
+function defaultHome(auth) {
+  if (auth.isAdmin) return '/admin/dashboard'
+  if (auth.isShop) return '/shop/dashboard'
+  return '/'
+}
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
+  const needsAuth = to.matched.some((r) => r.meta.requiresAuth)
+  const allowAnonymous = to.matched.some((r) => r.meta.allowAnonymous)
+  const guestOnly = to.matched.some((r) => r.meta.guestOnly)
 
-  if (to.meta.guestOnly && auth.isLoggedIn) {
+  // 已登录访问登录页 → 回跳目标或角色首页
+  if (guestOnly && auth.isLoggedIn) {
     const redirect = to.query.redirect
-    return redirect && typeof redirect === 'string' ? redirect : '/'
+    if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+      return redirect
+    }
+    return defaultHome(auth)
   }
 
-  if (to.meta.requiresAuth && !auth.isLoggedIn) {
+  // 未登录访问需登录页（短链解析除外）→ 登录并带回跳
+  if (needsAuth && !auth.isLoggedIn && !allowAnonymous) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
 
@@ -82,20 +99,19 @@ router.beforeEach((to) => {
     return { path: '/admin/audit' }
   }
 
-  if (to.meta.requiresAdmin && !auth.isAdmin) {
+  if (to.matched.some((r) => r.meta.requiresAdmin) && !auth.isAdmin) {
     if (!auth.isLoggedIn) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
     return { path: '/', query: { msg: '需要管理员权限' } }
   }
-  if (to.meta.requiresShop && !auth.isShop) {
+  if (to.matched.some((r) => r.meta.requiresShop) && !auth.isShop) {
     if (!auth.isLoggedIn) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
     return { path: '/profile', query: { msg: '请先完成商家入驻审核' } }
   }
 
-  // 多租户：进入商家域页面时记录 shop_id
   if (to.name === 'ShopHome' && to.params.id) {
     auth.setCurrentShopId(to.params.id)
     auth.syncVisit(to.params.id, api)

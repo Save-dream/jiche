@@ -7,7 +7,7 @@
       </router-link>
 
       <h1 class="login-title">账号登录</h1>
-      <p class="login-desc">使用管理员下发的账号密码登录（暂未开通微信扫码）</p>
+      <p class="login-desc">请使用管理员分配的账号密码登录</p>
 
       <el-form
         ref="formRef"
@@ -97,8 +97,18 @@ async function onSubmit() {
     auth.loginSession({ token: res.data.token, user: res.data.user })
     await auth.loadUnreadMessages(api)
     ElMessage.success('登录成功')
-    const redirect = route.query.redirect || '/'
-    router.replace(typeof redirect === 'string' ? redirect : '/')
+    const redirect = route.query.redirect
+    if (typeof redirect === 'string' && redirect.startsWith('/')) {
+      router.replace(redirect)
+      return
+    }
+    if (auth.isAdmin) {
+      router.replace('/admin/dashboard')
+    } else if (auth.isShop) {
+      router.replace('/shop/dashboard')
+    } else {
+      router.replace('/')
+    }
   } catch {
     /* 错误由 axios 拦截器提示 */
   } finally {

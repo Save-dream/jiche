@@ -7,7 +7,7 @@
       <h2 class="share-guide__title">请通过商家分享链接访问</h2>
       <p class="share-guide__desc">
         极车是<strong>私域看车</strong>平台，不支持公开搜索或随意浏览车源。
-        您只能通过商家微信分享的<strong>商品链接</strong>或<strong>店铺链接</strong>进入对应商家域。
+        您只能通过商家分享的<strong>商品链接</strong>或<strong>店铺链接</strong>进入对应商家域。
       </p>
 
       <div class="share-guide__tips">
@@ -15,7 +15,7 @@
           <span class="tip-num">1</span>
           <div>
             <div class="tip-title">获取分享链接</div>
-            <div class="tip-text">向商家索取商品或店铺分享链接，在微信中打开即可自动携带商家信息</div>
+            <div class="tip-text">向商家索取商品或店铺分享链接，打开后即可自动进入对应商家域</div>
           </div>
         </div>
         <div class="tip-item">

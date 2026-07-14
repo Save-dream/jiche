@@ -20,22 +20,6 @@
 
       <!-- 右侧操作区 -->
       <div class="navbar__actions">
-        <!-- 调试角色切换：仅 Vite 开发模式显示 -->
-        <el-dropdown v-if="showDevTools && !isMobile" @command="handleSwitchRole" class="dev-switcher">
-          <el-button size="small" type="warning" plain>
-            [Dev] {{ roleLabel }} <el-icon><ArrowDown /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="user">普通用户</el-dropdown-item>
-              <el-dropdown-item command="pending">待审核商家</el-dropdown-item>
-              <el-dropdown-item command="shop">已入驻商家</el-dropdown-item>
-              <el-dropdown-item command="banned">封禁商家</el-dropdown-item>
-              <el-dropdown-item command="admin">管理员</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-
         <!-- 收藏（移动端在下拉菜单里） -->
         <router-link v-if="!isMobile" to="/favorites" class="navbar__icon-btn" title="我的收藏">
           <el-icon><Star /></el-icon>
@@ -70,17 +54,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { useAuthStore, SHOP_STATUS } from '@/stores/auth'
-import api from '@/api'
+import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 
 const isMobile = ref(false)
-const showDevTools = ref(import.meta.env.DEV)
 
 function checkMobile() {
   isMobile.value = window.innerWidth <= 768
@@ -89,26 +70,11 @@ function checkMobile() {
 onMounted(() => { checkMobile(); window.addEventListener('resize', checkMobile) })
 onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
-const roleLabel = computed(() => {
-  if (auth.isAdmin) return '管理员'
-  if (auth.isShop) return '商家'
-  return SHOP_STATUS[auth.shopStatus]?.label || '用户'
-})
-
 function handleUserCommand(cmd) {
   if (cmd === 'profile') router.push('/profile')
   else if (cmd === 'shop') router.push('/shop/dashboard')
   else if (cmd === 'admin') router.push('/admin/dashboard')
   else if (cmd === 'logout') { auth.logout(); router.push('/login') }
-}
-
-async function handleSwitchRole(role) {
-  try {
-    await auth.switchRole(role, api)
-    ElMessage.success('已切换开发演示账号')
-  } catch {
-    /* 错误由 axios 拦截器提示 */
-  }
 }
 </script>
 
@@ -196,11 +162,8 @@ async function handleSwitchRole(role) {
 
 .navbar__login-btn { text-decoration: none; }
 
-.dev-switcher { display: flex; }
-
 @media (max-width: 768px) {
   .navbar__nav { display: none; }
-  .dev-switcher { display: none !important; }
   .navbar__icon-btn { display: none; }
   .navbar__username { display: none; }
 }
