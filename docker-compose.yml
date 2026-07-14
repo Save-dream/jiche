@@ -1,9 +1,10 @@
 # 极车 Docker 部署
-# 数据与日志全部 bind mount 到宿主机 ./data、./logs（相对本文件所在目录）
+# 数据与日志全部 bind mount 到宿主机 ./data、./logs
+# 默认镜像走 DaoCloud 代理前缀，避免国内直连 docker.io 超时
 # 用法见 deploy/DOCKER.md
 services:
   mysql:
-    image: mysql:8.0
+    image: ${MYSQL_IMAGE:-docker.m.daocloud.io/library/mysql:8.0}
     container_name: jiche-mysql
     restart: always
     environment:
@@ -37,6 +38,8 @@ services:
     build:
       context: ./jiche-backend
       dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-docker.m.daocloud.io/library/python:3.12-slim-bookworm}
     container_name: jiche-backend
     restart: always
     depends_on:
@@ -76,6 +79,9 @@ services:
     build:
       context: ./jiche-frontend
       dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-docker.m.daocloud.io/library/node:20-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-docker.m.daocloud.io/library/nginx:1.27-alpine}
     container_name: jiche-nginx
     restart: always
     depends_on:
