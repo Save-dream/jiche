@@ -75,12 +75,18 @@ class Command(BaseCommand):
                 user.nickname = item['nickname']
                 user.is_staff = item['is_staff']
                 user.is_super_staff = item['is_super_staff']
-                user.shop_status = item['shop_status']
                 user.is_active = True
                 update_fields = [
                     'nickname', 'is_staff', 'is_super_staff',
-                    'shop_status', 'is_active', 'updated_at',
+                    'is_active', 'updated_at',
                 ]
+                # 勿覆盖用户在业务中的入驻状态（如待审核）
+                if user.shop_status in (
+                    User.ShopStatus.NORMAL,
+                    User.ShopStatus.REJECTED,
+                ) or item.get('create_shop'):
+                    user.shop_status = item['shop_status']
+                    update_fields.append('shop_status')
                 if reset_password or not user.has_usable_password():
                     user.set_password(item['password'])
                     update_fields.append('password')
@@ -93,13 +99,19 @@ class Command(BaseCommand):
                 if shop is None:
                     shop = Shop.objects.filter(user=user, is_deleted=False).first()
                 if shop is None:
+                    # 避免与业务商家电话冲突：每账号固定独立号段
+                    default_phone = {
+                        'shop': '13800000001',
+                        'admin': '13800000002',
+                        'user': '13800000003',
+                    }.get(username, f'138{user.id:08d}'[:11])
                     shop = Shop.objects.create(
                         user=user,
                         name=item.get('shop_name') or f'{user.nickname}的店铺',
                         shop_type=Shop.ShopType.PERSONAL,
                         contact_name=user.nickname or username,
-                        phone=user.phone or '13800000000',
-                        wechat_qrcode='',
+                        phone=user.phone or default_phone,
+                        wechat_qrcode='https://example.com/wechat-qrcode-placeholder.png',
                         shop_status=Shop.ShopStatus.NORMAL,
                         approved_at=timezone.now(),
                     )

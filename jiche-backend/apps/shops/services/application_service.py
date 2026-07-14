@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -155,25 +155,7 @@ class ApplicationService:
         now = timezone.now()
 
         if action == 'approve':
-            if Shop.objects.filter(user=user, is_deleted=False).exists():
-                raise ApplicationServiceError('该用户已是商家')
-            if Shop.objects.filter(phone=application.phone, is_deleted=False).exists():
-                raise ApplicationServiceError('联系电话已被占用')
-
-            shop = Shop.objects.create(
-                user=user,
-                name=(application.name or self._generate_shop_name(application))[:64],
-                shop_type=application.shop_type,
-                contact_name=application.contact_name,
-                phone=application.phone,
-                address=application.address,
-                main_models=application.main_models,
-                description=application.description,
-                wechat_qrcode=application.wechat_qrcode,
-                qualification_photo=application.qualification_photo,
-                shop_status=Shop.ShopStatus.NORMAL,
-                approved_at=now,
-            )
+            shop = self._approve_create_or_revive_shop(application, user, now)
             application.application_status = ShopApplication.ApplicationStatus.APPROVED
             user.shop_status = User.ShopStatus.APPROVED
             user.shop_id = shop.id
@@ -188,10 +170,63 @@ class ApplicationService:
 
         application.audited_by = auditor
         application.audited_at = now
-        application.save()
-        user.save(update_fields=['shop_status', 'shop_id', 'updated_at'])
+        try:
+            application.save()
+            user.save(update_fields=['shop_status', 'shop_id', 'updated_at'])
+        except IntegrityError as exc:
+            raise ApplicationServiceError(f'审核写入失败：{exc}') from exc
 
         return {
             'application': self._serialize_application(application),
             'user': AuthService().serialize_user(user),
         }
+
+    def _approve_create_or_revive_shop(
+        self,
+        application: ShopApplication,
+        user: User,
+        now,
+    ) -> Shop:
+        """创建商家；若该用户已有逻辑删除店铺则复活并更新资料。"""
+        active = Shop.objects.filter(user=user, is_deleted=False).first()
+        if active:
+            raise ApplicationServiceError('该用户已是商家')
+
+        phone_taken = (
+            Shop.objects.filter(phone=application.phone, is_deleted=False)
+            .exclude(user=user)
+            .exists()
+        )
+        if phone_taken:
+            raise ApplicationServiceError('联系电话已被占用')
+
+        name = (application.name or self._generate_shop_name(application))[:64]
+        fields = {
+            'name': name,
+            'shop_type': application.shop_type,
+            'contact_name': application.contact_name,
+            'phone': application.phone,
+            'address': application.address or '',
+            'main_models': application.main_models or '',
+            'description': application.description or '',
+            'wechat_qrcode': application.wechat_qrcode or '',
+            'qualification_photo': application.qualification_photo,
+            'shop_status': Shop.ShopStatus.NORMAL,
+            'approved_at': now,
+            'banned_at': None,
+            'ban_reason': None,
+            'is_deleted': False,
+        }
+
+        existing = Shop.objects.filter(user=user).first()
+        try:
+            if existing:
+                for key, value in fields.items():
+                    setattr(existing, key, value)
+                existing.save()
+                return existing
+            return Shop.objects.create(user=user, **fields)
+        except IntegrityError as exc:
+            raise ApplicationServiceError(
+                '创建商家失败，可能是联系电话或用户店铺关系冲突，请检查后重试'
+            ) from exc

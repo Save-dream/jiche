@@ -69,7 +69,8 @@ services:
       - |
         mkdir -p /var/log/jiche /app/media
         python manage.py migrate --noinput
-        python manage.py create_init_accounts --reset-password || true
+        # 勿每次 --reset-password，避免覆盖业务中的入驻状态；缺账号时才创建
+        python manage.py create_init_accounts || true
         exec gunicorn config.wsgi:application \
           --bind 0.0.0.0:8000 \
           --workers 3 \

@@ -1,8 +1,11 @@
+import logging
 from typing import Optional
 
 from django.core.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.views import APIView
+
+logger = logging.getLogger(__name__)
 
 from apps.common.permissions import IsAuthenticatedUser, IsPlatformAdmin, IsShopMerchant
 from apps.common.response import error_response, success_response
@@ -84,6 +87,13 @@ class AdminApplicationAuditView(APIView):
         except ApplicationServiceError as exc:
             code = 404 if '不存在' in str(exc) else 400
             return error_response(str(exc), code=code)
+        except Exception as exc:
+            logger.exception(
+                'audit_application failed id=%s action=%s',
+                application_id,
+                serializer.validated_data.get('action'),
+            )
+            return error_response(f'审核失败：{exc}', code=500, status=500)
         return success_response(data)
 
 
