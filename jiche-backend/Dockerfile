@@ -5,13 +5,17 @@ FROM ${PYTHON_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+    PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ \
+    PIP_TRUSTED_HOST=mirrors.aliyun.com
 
 WORKDIR /app
 
 COPY requirements.txt .
 # Pillow 使用 manylinux 预编译 wheel，无需 apt 装 libjpeg
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
+    -r requirements.txt
 
 COPY . .
 RUN mkdir -p /app/media
