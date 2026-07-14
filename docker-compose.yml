@@ -62,18 +62,22 @@ services:
     volumes:
       - ./data/media:/app/media
       - ./logs/backend:/var/log/jiche
-    command: >
-      sh -c "mkdir -p /var/log/jiche /app/media &&
-             python manage.py migrate --noinput &&
-             python manage.py create_init_accounts --reset-password || true &&
-             gunicorn config.wsgi:application
-               --bind 0.0.0.0:8000
-               --workers 3
-               --timeout 60
-               --access-logfile /var/log/jiche/access.log
-               --error-logfile /var/log/jiche/error.log
-               --capture-output
-               --log-level info"
+    # 必须 bind 0.0.0.0，否则容器外（nginx）无法访问（默认 127.0.0.1 会导致 502）
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/log/jiche /app/media
+        python manage.py migrate --noinput
+        python manage.py create_init_accounts --reset-password || true
+        exec gunicorn config.wsgi:application \
+          --bind 0.0.0.0:8000 \
+          --workers 3 \
+          --timeout 60 \
+          --access-logfile /var/log/jiche/access.log \
+          --error-logfile /var/log/jiche/error.log \
+          --capture-output \
+          --log-level info
 
   nginx:
     build:
