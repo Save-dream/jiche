@@ -61,6 +61,17 @@ cp .env.docker.example .env
 nano .env   # 改密码、公网 IP、SECRET_KEY
 ```
 
+## Docker Hub 超时（国内 ECS 常见）
+
+报错类似：`dial tcp ... registry-1.docker.io ... i/o timeout`
+
+```bash
+bash deploy/configure-docker-mirror.sh
+sudo docker pull docker.m.daocloud.io/library/mysql:8.0
+```
+
+compose / Dockerfile 已默认使用 `docker.m.daocloud.io/library/...` 前缀。
+
 ## 启动 / 更新
 
 ```bash
@@ -72,6 +83,7 @@ sudo systemctl stop jiche 2>/dev/null || true
 sudo systemctl stop nginx 2>/dev/null || true
 
 bash deploy/prepare-host-dirs.sh
+bash deploy/configure-docker-mirror.sh
 sudo docker compose up -d --build
 
 sudo docker compose ps
