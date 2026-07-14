@@ -1,3 +1,4 @@
+# 国内默认走 DaoCloud；构建时不要再 apt 拉 deb.debian.org（极慢/易卡住）
 ARG PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.12-slim-bookworm
 FROM ${PYTHON_IMAGE}
 
@@ -8,23 +9,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Debian apt 换国内源，减少构建超时
-RUN set -eux; \
-    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-      sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources; \
-    elif [ -f /etc/apt/sources.list ]; then \
-      sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list; \
-    fi; \
-    apt-get update \
-    && apt-get install -y --no-install-recommends \
-       libjpeg62-turbo zlib1g libpng16-16 \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
+# Pillow 使用 manylinux 预编译 wheel，无需 apt 装 libjpeg
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
 RUN mkdir -p /app/media
 
 EXPOSE 8000
