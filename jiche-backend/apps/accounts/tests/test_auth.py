@@ -100,6 +100,20 @@ class AdminStaffTests(TestCase):
         with self.assertRaises(ValueError):
             self.service.revoke_staff(self.admin, self.admin)
 
+    def test_ban_then_delete_user(self):
+        with self.assertRaises(ValueError):
+            self.service.delete_user(self.admin, self.normal, '直接删')
+        banned = self.service.ban_user(self.admin, self.normal, '违规')
+        self.assertFalse(banned.is_active)
+        self.assertEqual(banned.ban_reason, '违规')
+        deleted = self.service.delete_user(self.admin, banned, '清理账号')
+        self.assertTrue(deleted.is_deleted)
+        self.assertEqual(deleted.delete_reason, '清理账号')
+        active = self.service.list_admin_users('active')
+        self.assertFalse(any(u['id'] == self.normal.id for u in active['list']))
+        deleted_list = self.service.list_admin_users('deleted')
+        self.assertTrue(any(u['id'] == self.normal.id for u in deleted_list['list']))
+
 
 class AuthAPITests(TestCase):
     @override_settings(WECHAT_MOCK=True, DEBUG=True)

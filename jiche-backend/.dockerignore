@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.env
+db.sqlite3
+media
+.git
+.pytest_cache
+*.md
+scripts/api_test_results.json
+scripts/*_results.json

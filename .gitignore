@@ -44,5 +44,10 @@ htmlcov/
 deploy/run/
 deploy/logs/
 
+# Docker 宿主机数据与日志（勿提交）
+/data/
+/logs/
+!.env.docker.example
+
 # Misc
 dependencies.txt

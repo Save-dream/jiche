@@ -1,0 +1,86 @@
+# 极车 Docker 部署
+# 数据与日志全部 bind mount 到宿主机 ./data、./logs（相对本文件所在目录）
+# 用法见 deploy/DOCKER.md
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: jiche-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-JicheRoot@2026}
+      MYSQL_DATABASE: ${DB_NAME:-jiche}
+      MYSQL_USER: ${DB_USER:-jiche}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-JicheDb@2026}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --log-error=/var/log/mysql/error.log
+      - --general-log=0
+      - --slow-query-log=1
+      - --slow-query-log-file=/var/log/mysql/slow.log
+      - --long-query-time=2
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./logs/mysql:/var/log/mysql
+    ports:
+      - "${MYSQL_PUBLISH_PORT:-127.0.0.1:3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./jiche-backend
+      dockerfile: Dockerfile
+    container_name: jiche-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-production}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DB_ENGINE: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-jiche}
+      DB_USER: ${DB_USER:-jiche}
+      DB_PASSWORD: ${DB_PASSWORD:-JicheDb@2026}
+      WECHAT_MOCK: ${WECHAT_MOCK:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+      SHARE_WEB_BASE_URL: ${SHARE_WEB_BASE_URL:-http://localhost}
+      SHARE_SIGN_TTL_DAYS: ${SHARE_SIGN_TTL_DAYS:-7}
+    volumes:
+      - ./data/media:/app/media
+      - ./logs/backend:/var/log/jiche
+    command: >
+      sh -c "mkdir -p /var/log/jiche /app/media &&
+             python manage.py migrate --noinput &&
+             python manage.py create_init_accounts --reset-password || true &&
+             gunicorn config.wsgi:application
+               --bind 0.0.0.0:8000
+               --workers 3
+               --timeout 60
+               --access-logfile /var/log/jiche/access.log
+               --error-logfile /var/log/jiche/error.log
+               --capture-output
+               --log-level info"
+
+  nginx:
+    build:
+      context: ./jiche-frontend
+      dockerfile: Dockerfile
+    container_name: jiche-nginx
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./logs/nginx:/var/log/nginx

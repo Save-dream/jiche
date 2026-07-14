@@ -87,7 +87,7 @@ const navItems = computed(() => [
   { path: '/admin/shops', label: '商户管理', icon: 'OfficeBuilding' },
   { path: '/admin/bikes', label: '车源管控', icon: 'List' },
   { path: '/admin/messages', label: '留言查看', icon: 'ChatDotRound' },
-  { path: '/admin/users', label: '管理员管理', icon: 'UserFilled' },
+  { path: '/admin/users', label: '用户管理', icon: 'UserFilled' },
 ])
 
 const pageTitle = computed(() => {

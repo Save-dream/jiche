@@ -114,3 +114,21 @@ class ShopExtendedAPITests(TestCase):
         )
         self.assertEqual(stats_resp.status_code, 200)
         self.assertIn('total_shops', stats_resp.json()['data'])
+
+    def test_admin_soft_delete_shop(self):
+        del_resp = self.client.delete(
+            f'/api/admin/shops/{self.shop.id}/',
+            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
+        )
+        self.assertEqual(del_resp.status_code, 200)
+        self.shop.refresh_from_db()
+        self.assertTrue(self.shop.is_deleted)
+        self.assertTrue(
+            Bike.objects.filter(shop_id=self.shop.id, is_deleted=True).exists()
+        )
+        list_resp = self.client.get(
+            '/api/admin/shops/',
+            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
+        )
+        ids = [item['id'] for item in list_resp.json()['data']['list']]
+        self.assertNotIn(self.shop.id, ids)

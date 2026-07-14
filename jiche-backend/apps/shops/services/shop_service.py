@@ -114,6 +114,29 @@ class ShopService:
         return serialize_shop_public(shop)
 
     @transaction.atomic
+    def soft_delete_shop(self, shop_id: int) -> dict:
+        """商户逻辑删除：同步软删车源，释放手机号占用，解绑用户商家身份。"""
+        try:
+            shop = Shop.objects.select_related('user').get(pk=shop_id, is_deleted=False)
+        except Shop.DoesNotExist:
+            raise ShopServiceError('商家不存在')
+
+        data = serialize_shop_public(shop)
+        Bike.objects.filter(shop_id=shop.id, is_deleted=False).update(is_deleted=True)
+
+        # 释放 unique phone，避免逻辑删除后占号
+        shop.phone = f'D{shop.id:010d}'[:11]
+        shop.is_deleted = True
+        shop.save(update_fields=['phone', 'is_deleted', 'updated_at'])
+
+        user = shop.user
+        user.shop_status = User.ShopStatus.NORMAL
+        user.shop_id = None
+        user.save(update_fields=['shop_status', 'shop_id', 'updated_at'])
+        data['is_deleted'] = True
+        return data
+
+    @transaction.atomic
     def record_visit(self, user: Optional[User], shop_id: int) -> dict:
         try:
             shop = Shop.objects.get(pk=shop_id, is_deleted=False, shop_status=Shop.ShopStatus.NORMAL)

@@ -17,6 +17,7 @@ urlpatterns = [
     path('admin/shops/', views.AdminShopListView.as_view(), name='admin-shops'),
     path('admin/shops/<int:shop_id>/ban/', views.AdminShopBanView.as_view(), name='admin-shop-ban'),
     path('admin/shops/<int:shop_id>/unban/', views.AdminShopUnbanView.as_view(), name='admin-shop-unban'),
+    path('admin/shops/<int:shop_id>/', views.AdminShopDeleteView.as_view(), name='admin-shop-delete'),
     path('visits/', views.VisitView.as_view(), name='visits'),
     path('shop/stats/', views.ShopStatsView.as_view(), name='shop-stats'),
     path('admin/stats/', views.AdminStatsView.as_view(), name='admin-stats'),

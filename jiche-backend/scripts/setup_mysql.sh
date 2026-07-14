@@ -30,11 +30,14 @@ echo "==> 2/3 执行 Django 迁移"
 export DB_ENGINE=mysql
 .venv/bin/python manage.py migrate --noinput
 
-echo "==> 3/4 初始化预置账号与品牌字典"
-.venv/bin/python manage.py seed_auth_demo
-.venv/bin/python manage.py seed_catalog
+echo "==> 3/3 初始化预置账号与品牌字典"
+.venv/bin/python manage.py create_init_accounts --reset-password || true
+.venv/bin/python manage.py seed_catalog || true
 
-echo "==> 4/4 预制演示车源"
-.venv/bin/python manage.py seed_demo_data
+if [[ "${SEED_DEMO:-0}" == "1" ]]; then
+  echo "==> 可选：写入演示数据（SEED_DEMO=1）"
+  .venv/bin/python manage.py seed_auth_demo || true
+  .venv/bin/python manage.py seed_demo_data || true
+fi
 
-echo "完成。启动后端: .venv/bin/python manage.py runserver 8000"
+echo "完成。生产启动: bash deploy/restart.sh  或 Docker: 见 deploy/DOCKER.md"

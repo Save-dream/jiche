@@ -7,6 +7,7 @@ from apps.accounts.permissions import IsAuthenticatedUser, IsPlatformAdmin
 from apps.accounts.serializers import (
     LoginTicketConfirmSerializer,
     PasswordLoginSerializer,
+    ReasonActionSerializer,
     SimulateScanSerializer,
     UserPublicSerializer,
     WxMiniLoginSerializer,
@@ -169,11 +170,13 @@ class AdminUserListView(APIView):
     permission_classes = [IsPlatformAdmin]
 
     def get(self, request):
-        from apps.accounts.models import User
-
-        users = User.objects.filter(is_deleted=False).order_by('-is_super_staff', '-is_staff', 'id')
-        serializer = UserPublicSerializer(users, many=True)
-        return success_response({'list': serializer.data, 'total': users.count()})
+        status = request.query_params.get('status', 'active')
+        service = AuthService()
+        try:
+            data = service.list_admin_users(status=status)
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(data)
 
 
 class GrantStaffView(APIView):
@@ -191,7 +194,9 @@ class GrantStaffView(APIView):
             target = service.grant_staff(request.user, target)
         except PermissionError as exc:
             return error_response(str(exc), code=403, status=403)
-        return success_response(UserPublicSerializer(target).data)
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(service.serialize_user(target))
 
 
 class RevokeStaffView(APIView):
@@ -211,4 +216,68 @@ class RevokeStaffView(APIView):
             return error_response(str(exc), code=403, status=403)
         except ValueError as exc:
             return error_response(str(exc), code=403, status=403)
-        return success_response(UserPublicSerializer(target).data)
+        return success_response(service.serialize_user(target))
+
+
+class BanUserView(APIView):
+    permission_classes = [IsPlatformAdmin]
+
+    def post(self, request, user_id):
+        from apps.accounts.models import User
+
+        serializer = ReasonActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            target = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return error_response('用户不存在', code=404)
+        service = AuthService()
+        try:
+            target = service.ban_user(request.user, target, serializer.validated_data['reason'])
+        except PermissionError as exc:
+            return error_response(str(exc), code=403, status=403)
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(service.serialize_user(target))
+
+
+class UnbanUserView(APIView):
+    permission_classes = [IsPlatformAdmin]
+
+    def post(self, request, user_id):
+        from apps.accounts.models import User
+
+        try:
+            target = User.objects.get(id=user_id, is_deleted=False)
+        except User.DoesNotExist:
+            return error_response('用户不存在', code=404)
+        service = AuthService()
+        try:
+            target = service.unban_user(request.user, target)
+        except PermissionError as exc:
+            return error_response(str(exc), code=403, status=403)
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(service.serialize_user(target))
+
+
+class DeleteUserView(APIView):
+    permission_classes = [IsPlatformAdmin]
+
+    def post(self, request, user_id):
+        from apps.accounts.models import User
+
+        serializer = ReasonActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            target = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return error_response('用户不存在', code=404)
+        service = AuthService()
+        try:
+            target = service.delete_user(request.user, target, serializer.validated_data['reason'])
+        except PermissionError as exc:
+            return error_response(str(exc), code=403, status=403)
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(service.serialize_user(target))

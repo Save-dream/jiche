@@ -31,8 +31,16 @@ class AuthService:
             'avatar': user.avatar,
             'is_staff': user.is_staff,
             'is_super_staff': user.is_super_staff,
+            'is_active': user.is_active,
+            'is_deleted': user.is_deleted,
+            'account_status': user.account_status,
             'shop_status': user.shop_status,
             'shop_id': user.shop_id,
+            'ban_reason': user.ban_reason,
+            'banned_at': user.banned_at.isoformat() if user.banned_at else None,
+            'delete_reason': user.delete_reason,
+            'deleted_at': user.deleted_at.isoformat() if user.deleted_at else None,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
         }
 
     def update_login_meta(self, user: User, platform: str) -> None:
@@ -260,6 +268,8 @@ class AuthService:
     def grant_staff(self, operator: User, target: User) -> User:
         if not operator.is_platform_admin:
             raise PermissionError('需要管理员权限')
+        if target.is_deleted or not target.is_active:
+            raise ValueError('仅正常状态用户可授予管理员')
         target.is_staff = True
         target.staff_granted_by = operator
         target.staff_granted_at = timezone.now()
@@ -273,4 +283,98 @@ class AuthService:
             raise ValueError('预置超级管理员不可撤销')
         target.is_staff = False
         target.save(update_fields=['is_staff', 'updated_at'])
+        return target
+
+    def list_admin_users(self, status: str = 'active') -> dict:
+        """
+        status: active | banned | deleted | all
+        默认仅正常用户；排序优先正常，再管理员。
+        """
+        qs = User.objects.all()
+        status = (status or 'active').strip().lower()
+        if status == 'active':
+            qs = qs.filter(is_deleted=False, is_active=True)
+        elif status == 'banned':
+            qs = qs.filter(is_deleted=False, is_active=False)
+        elif status == 'deleted':
+            qs = qs.filter(is_deleted=True)
+        elif status == 'all':
+            pass
+        else:
+            raise ValueError('无效的状态筛选，可选：active / banned / deleted / all')
+
+        qs = qs.order_by('is_deleted', '-is_active', '-is_super_staff', '-is_staff', '-id')
+        users = list(qs)
+        return {
+            'list': [self.serialize_user(u) for u in users],
+            'total': len(users),
+            'status': status,
+        }
+
+    def ban_user(self, operator: User, target: User, reason: str) -> User:
+        if not operator.is_platform_admin:
+            raise PermissionError('需要管理员权限')
+        if target.id == operator.id:
+            raise ValueError('不能封禁自己')
+        if target.is_super_staff:
+            raise ValueError('预置超级管理员不可封禁')
+        if target.is_deleted:
+            raise ValueError('用户已删除')
+        if not target.is_active:
+            raise ValueError('用户已处于封禁状态')
+        target.is_active = False
+        target.banned_at = timezone.now()
+        target.ban_reason = reason
+        # 封禁时同步撤销普通管理员权限（超管已拦截）
+        target.is_staff = False
+        target.save(
+            update_fields=[
+                'is_active',
+                'banned_at',
+                'ban_reason',
+                'is_staff',
+                'updated_at',
+            ]
+        )
+        return target
+
+    def unban_user(self, operator: User, target: User) -> User:
+        if not operator.is_platform_admin:
+            raise PermissionError('需要管理员权限')
+        if target.is_deleted:
+            raise ValueError('已删除用户无法解封')
+        if target.is_active:
+            raise ValueError('用户未封禁')
+        target.is_active = True
+        target.banned_at = None
+        target.ban_reason = None
+        target.save(update_fields=['is_active', 'banned_at', 'ban_reason', 'updated_at'])
+        return target
+
+    def delete_user(self, operator: User, target: User, reason: str) -> User:
+        """仅已封禁用户可逻辑删除。"""
+        if not operator.is_platform_admin:
+            raise PermissionError('需要管理员权限')
+        if target.id == operator.id:
+            raise ValueError('不能删除自己')
+        if target.is_super_staff:
+            raise ValueError('预置超级管理员不可删除')
+        if target.is_deleted:
+            raise ValueError('用户已删除')
+        # 正常用户不可直接删除，须先封禁
+        if target.is_active:
+            raise ValueError('正常用户不能直接删除，请先封禁')
+        target.is_deleted = True
+        target.deleted_at = timezone.now()
+        target.delete_reason = reason
+        target.is_staff = False
+        target.save(
+            update_fields=[
+                'is_deleted',
+                'deleted_at',
+                'delete_reason',
+                'is_staff',
+                'updated_at',
+            ]
+        )
         return target

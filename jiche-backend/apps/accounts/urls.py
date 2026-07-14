@@ -26,4 +26,7 @@ urlpatterns = [
     path('admin/users/', views.AdminUserListView.as_view(), name='admin-users'),
     path('admin/users/<int:user_id>/grant-staff/', views.GrantStaffView.as_view(), name='admin-grant-staff'),
     path('admin/users/<int:user_id>/revoke-staff/', views.RevokeStaffView.as_view(), name='admin-revoke-staff'),
+    path('admin/users/<int:user_id>/ban/', views.BanUserView.as_view(), name='admin-ban-user'),
+    path('admin/users/<int:user_id>/unban/', views.UnbanUserView.as_view(), name='admin-unban-user'),
+    path('admin/users/<int:user_id>/delete/', views.DeleteUserView.as_view(), name='admin-delete-user'),
 ]

@@ -77,6 +77,10 @@ class User(AbstractBaseUser):
     )
     is_deleted = models.BooleanField('逻辑删除', default=False)
     is_active = models.BooleanField('是否启用', default=True)
+    banned_at = models.DateTimeField('封禁时间', null=True, blank=True)
+    ban_reason = models.CharField('封禁原因', max_length=200, null=True, blank=True)
+    deleted_at = models.DateTimeField('删除时间', null=True, blank=True)
+    delete_reason = models.CharField('删除原因', max_length=200, null=True, blank=True)
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
     updated_at = models.DateTimeField('更新时间', auto_now=True)
 
@@ -101,6 +105,15 @@ class User(AbstractBaseUser):
     @property
     def is_platform_admin(self):
         return self.is_staff and self.is_active and not self.is_deleted
+
+    @property
+    def account_status(self) -> str:
+        """账户生命周期状态：active / banned / deleted。"""
+        if self.is_deleted:
+            return 'deleted'
+        if not self.is_active:
+            return 'banned'
+        return 'active'
 
 
 class AuthLoginTicket(models.Model):

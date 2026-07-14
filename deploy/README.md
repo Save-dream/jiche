@@ -1,5 +1,8 @@
 # 极车云服务器部署脚本
 
+> **推荐生产使用 Docker**：见 [`DOCKER.md`](./DOCKER.md)。  
+> 下文为旧版「venv + Gunicorn + 宿主机 Nginx」部署方式。
+
 代码目录默认：`/home/jiche`（可用环境变量 `JICHE_HOME` 覆盖）。
 
 ```

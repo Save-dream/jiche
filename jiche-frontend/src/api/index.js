@@ -62,6 +62,9 @@ const api = {
   getAdminUsers: (params) => request.get('/admin/users/', { params }),
   grantStaff: (userId) => request.post(`/admin/users/${userId}/grant-staff/`),
   revokeStaff: (userId) => request.post(`/admin/users/${userId}/revoke-staff/`),
+  banUser: (userId, data) => request.post(`/admin/users/${userId}/ban/`, data),
+  unbanUser: (userId) => request.post(`/admin/users/${userId}/unban/`),
+  deleteUser: (userId, data) => request.post(`/admin/users/${userId}/delete/`, data),
 
   // ========== 入驻 / 上传 ==========
   uploadImage: (file) => {
@@ -126,6 +129,7 @@ const api = {
   getAllShops: (params) => request.get('/admin/shops/', { params }),
   banShop: (id) => request.post(`/admin/shops/${id}/ban/`),
   unbanShop: (id) => request.post(`/admin/shops/${id}/unban/`),
+  deleteShop: (id) => request.delete(`/admin/shops/${id}/`),
   getAllBikes: (params) => request.get('/admin/bikes/', { params }),
   forceOffShelf: (id, data) => request.post(`/admin/bikes/${id}/force-off-shelf/`, data || {}),
   restoreBike: (id) => request.post(`/admin/bikes/${id}/restore/`),

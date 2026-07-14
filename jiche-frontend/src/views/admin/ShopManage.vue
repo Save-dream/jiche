@@ -23,7 +23,7 @@
             <el-tag :type="SHOP_STATUS[row.shop_status]?.type" size="small">{{ SHOP_STATUS[row.shop_status]?.label }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="$router.push(`/shop/${row.id}`)">查看主页</el-button>
             <el-popconfirm v-if="row.shop_status !== 4" title="确认封禁该商户？封禁后商家将无法操作任何数据。" @confirm="banShop(row)">
@@ -34,6 +34,11 @@
             <el-popconfirm v-else title="确认解除封禁？" @confirm="unbanShop(row)">
               <template #reference>
                 <el-button size="small" type="success">解封</el-button>
+              </template>
+            </el-popconfirm>
+            <el-popconfirm title="确认删除该商户？删除后前台不可见（逻辑删除）。" @confirm="deleteShop(row)">
+              <template #reference>
+                <el-button size="small" type="danger" plain>删除</el-button>
               </template>
             </el-popconfirm>
           </template>
@@ -69,6 +74,11 @@ async function unbanShop(row) {
   const res = await api.unbanShop(row.id)
   row.shop_status = res.data.shop_status
   ElMessage.success('封禁已解除')
+}
+async function deleteShop(row) {
+  await api.deleteShop(row.id)
+  shops.value = shops.value.filter((s) => s.id !== row.id)
+  ElMessage.success('商户已删除')
 }
 
 onMounted(loadData)

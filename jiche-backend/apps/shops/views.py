@@ -155,6 +155,18 @@ class AdminShopUnbanView(APIView):
         return success_response(data)
 
 
+class AdminShopDeleteView(APIView):
+    permission_classes = [IsPlatformAdmin]
+
+    def delete(self, request, shop_id):
+        service = ShopService()
+        try:
+            data = service.soft_delete_shop(shop_id)
+        except ShopServiceError as exc:
+            return error_response(str(exc), code=404, status=404)
+        return success_response(data)
+
+
 class VisitView(APIView):
     def get(self, request):
         if not request.user.is_authenticated:
