@@ -102,7 +102,7 @@ class AdminStaffTests(TestCase):
 
     def test_ban_then_delete_user(self):
         with self.assertRaises(ValueError):
-            self.service.delete_user(self.admin, self.normal, '直接删')
+            self.service.ban_user(self.admin, self.admin, '想封超管')
         banned = self.service.ban_user(self.admin, self.normal, '违规')
         self.assertFalse(banned.is_active)
         self.assertEqual(banned.ban_reason, '违规')
@@ -113,6 +113,32 @@ class AdminStaffTests(TestCase):
         self.assertFalse(any(u['id'] == self.normal.id for u in active['list']))
         deleted_list = self.service.list_admin_users('deleted')
         self.assertTrue(any(u['id'] == self.normal.id for u in deleted_list['list']))
+
+    def test_cannot_ban_or_delete_staff(self):
+        staff = User.objects.create_user(
+            unionid='union_staff',
+            nickname='授权管理员',
+            is_staff=True,
+        )
+        with self.assertRaises(ValueError):
+            self.service.ban_user(self.admin, staff, '不可封')
+        with self.assertRaises(ValueError):
+            self.service.delete_user(self.admin, staff, '不可删')
+
+    def test_password_register(self):
+        data = self.service.password_register(
+            username='newbie01',
+            password='secret12',
+            nickname='新人',
+            phone='13900001111',
+        )
+        self.assertIn('token', data)
+        self.assertEqual(data['user']['nickname'], '新人')
+        self.assertFalse(data['user']['is_staff'])
+        user = User.objects.get(internal_username='newbie01')
+        self.assertTrue(user.check_password('secret12'))
+        with self.assertRaises(ValueError):
+            self.service.password_register(username='newbie01', password='secret12')
 
 
 class AuthAPITests(TestCase):

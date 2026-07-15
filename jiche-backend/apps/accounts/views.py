@@ -7,6 +7,7 @@ from apps.accounts.permissions import IsAuthenticatedUser, IsPlatformAdmin
 from apps.accounts.serializers import (
     LoginTicketConfirmSerializer,
     PasswordLoginSerializer,
+    PasswordRegisterSerializer,
     ReasonActionSerializer,
     SimulateScanSerializer,
     UserPublicSerializer,
@@ -109,6 +110,20 @@ class PasswordLoginView(APIView):
                 serializer.validated_data['username'],
                 serializer.validated_data['password'],
             )
+        except ValueError as exc:
+            return error_response(str(exc), code=400)
+        return success_response(data)
+
+
+class PasswordRegisterView(APIView):
+    """普通用户自助注册（微信未接通前的临时方案，注册即登录）。"""
+
+    def post(self, request):
+        serializer = PasswordRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service = AuthService()
+        try:
+            data = service.password_register(**serializer.validated_data)
         except ValueError as exc:
             return error_response(str(exc), code=400)
         return success_response(data)

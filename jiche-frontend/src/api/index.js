@@ -58,6 +58,7 @@ const api = {
   logout: () => request.post('/auth/logout/'),
   getUserInfo: () => request.get('/auth/me/'),
   passwordLogin: (data) => request.post('/auth/login/', data),
+  passwordRegister: (data) => request.post('/auth/register/', data),
   devLogin: (role) => request.post('/auth/dev/login/', { role }),
   getAdminUsers: (params) => request.get('/admin/users/', { params }),
   grantStaff: (userId) => request.post(`/admin/users/${userId}/grant-staff/`),

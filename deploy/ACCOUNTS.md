@@ -1,20 +1,37 @@
 # 初始登录账号（账号密码登录）
 
-执行命令创建/重置：
+执行命令创建/重置预置账号：
 
 ```bash
 cd /home/jiche/jiche-backend
-source .venv/bin/activate   # 或用你的 Python 虚拟环境
+# Docker：
+# sudo docker compose exec backend python manage.py create_init_accounts --reset-password
+source .venv/bin/activate
 python manage.py create_init_accounts --reset-password
 ```
 
 | 账号 | 密码 | 角色 | 说明 |
 |------|------|------|------|
-| `admin` | `Jiche@Admin2026` | 平台管理员 | 可进管理中心 |
-| `shop` | `Jiche@Shop2026` | 已入驻商家 | 可进商家后台，店铺可自行修改 |
-| `user` | `Jiche@User2026` | 普通用户 | C 端浏览 / 收藏 / 咨询 |
+| `admin` | `Jiche@Admin2026` | 平台管理员（预置） | **不可封禁、不可删除** |
+| `shop` | `Jiche@Shop2026` | 已入驻商家 | 可进商家后台 |
+| `user` | `Jiche@User2026` | 普通用户 | 也可在登录页自助注册新用户 |
 
-登录地址：`http://你的域名或IP/login`  
-接口：`POST /api/auth/login/`，body：`{"username":"admin","password":"Jiche@Admin2026"}`
+## 普通用户注册（测试期 / 微信未接通）
 
-> 微信扫码登录暂未启用。上线正式微信登录前请修改默认密码。
+- 页面：`/login` →「去注册」
+- 接口：`POST /api/auth/register/`  
+  body：`{"username","password","nickname?","phone?"}`  
+  成功后直接返回 token（等同授权登录建号）
+
+## 用户管理规则
+
+| 对象 | 封禁 | 删除 | 授予管理员 |
+|------|------|------|------------|
+| 普通用户 | ✅（封禁后无法登录） | ✅（逻辑删除，需理由） | ✅ |
+| 平台管理员（含授权） | ❌ | ❌ | — |
+| 预置超管 | ❌ | ❌ | 不可撤销 |
+
+登录：`POST /api/auth/login/`  
+封禁后登录提示：「账号已被封禁，无法登录」
+
+> 微信扫码登录暂未启用。正式接通微信后，「注册」将由微信授权替代。

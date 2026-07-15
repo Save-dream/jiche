@@ -41,6 +41,42 @@ class AuthService:
             'delete_reason': user.delete_reason,
             'deleted_at': user.deleted_at.isoformat() if user.deleted_at else None,
             'created_at': user.created_at.isoformat() if user.created_at else None,
+            'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+            'last_login_platform': user.last_login_platform or '',
+        }
+
+    def _assert_not_platform_admin_target(self, target: User, action: str) -> None:
+        """平台管理员（含预置超管与授权管理员）不可封禁/删除。"""
+        if target.is_super_staff or target.is_staff:
+            raise ValueError(f'平台管理员不可{action}')
+
+    def password_register(
+        self,
+        *,
+        username: str,
+        password: str,
+        nickname: str = '',
+        phone: str | None = None,
+    ) -> dict:
+        """临时自助注册，等同微信授权后建号（正式环境将改回微信）。"""
+        username = (username or '').strip()
+        if User.objects.filter(internal_username=username, is_deleted=False).exists():
+            raise ValueError('账号已存在')
+        user = User.objects.create_user(
+            internal_username=username,
+            password=password,
+            nickname=nickname or username,
+            phone=phone or None,
+            is_active=True,
+            is_staff=False,
+            is_super_staff=False,
+        )
+        self.update_login_meta(user, User.LoginPlatform.WEB)
+        tokens = self.issue_tokens(user)
+        return {
+            'token': tokens['token'],
+            'refresh_token': tokens['refresh_token'],
+            'user': self.serialize_user(user),
         }
 
     def update_login_meta(self, user: User, platform: str) -> None:
@@ -253,7 +289,7 @@ class AuthService:
         if user is None or not user.check_password(password):
             raise ValueError('账号或密码错误')
         if not user.is_active:
-            raise ValueError('账号已禁用')
+            raise ValueError('账号已被封禁，无法登录')
         if user.shop_status == User.ShopStatus.BANNED and not user.is_staff:
             # 封禁商家仍可登录 C 端浏览；后台路由由前端拦截
             pass
@@ -316,8 +352,7 @@ class AuthService:
             raise PermissionError('需要管理员权限')
         if target.id == operator.id:
             raise ValueError('不能封禁自己')
-        if target.is_super_staff:
-            raise ValueError('预置超级管理员不可封禁')
+        self._assert_not_platform_admin_target(target, '封禁')
         if target.is_deleted:
             raise ValueError('用户已删除')
         if not target.is_active:
@@ -325,14 +360,11 @@ class AuthService:
         target.is_active = False
         target.banned_at = timezone.now()
         target.ban_reason = reason
-        # 封禁时同步撤销普通管理员权限（超管已拦截）
-        target.is_staff = False
         target.save(
             update_fields=[
                 'is_active',
                 'banned_at',
                 'ban_reason',
-                'is_staff',
                 'updated_at',
             ]
         )
@@ -352,28 +384,24 @@ class AuthService:
         return target
 
     def delete_user(self, operator: User, target: User, reason: str) -> User:
-        """仅已封禁用户可逻辑删除。"""
+        """普通用户逻辑删除；平台管理员不可删。建议先封禁再删。"""
         if not operator.is_platform_admin:
             raise PermissionError('需要管理员权限')
         if target.id == operator.id:
             raise ValueError('不能删除自己')
-        if target.is_super_staff:
-            raise ValueError('预置超级管理员不可删除')
+        self._assert_not_platform_admin_target(target, '删除')
         if target.is_deleted:
             raise ValueError('用户已删除')
-        # 正常用户不可直接删除，须先封禁
-        if target.is_active:
-            raise ValueError('正常用户不能直接删除，请先封禁')
         target.is_deleted = True
+        target.is_active = False
         target.deleted_at = timezone.now()
         target.delete_reason = reason
-        target.is_staff = False
         target.save(
             update_fields=[
                 'is_deleted',
+                'is_active',
                 'deleted_at',
                 'delete_reason',
-                'is_staff',
                 'updated_at',
             ]
         )
