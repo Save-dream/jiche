@@ -40,6 +40,11 @@ request.interceptors.response.use(
       ElMessage.error('登录已过期，请重新登录')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      // 触发下次路由守卫重新鉴权；若已在登录页则不跳转
+      if (!window.location.pathname.startsWith('/login')) {
+        const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.assign(`/login?redirect=${redirect}`)
+      }
     } else if (error.code === 'ERR_NETWORK') {
       ElMessage.error('无法连接后端，请确认 Django 服务已启动（端口 8000）')
     } else {

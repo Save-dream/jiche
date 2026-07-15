@@ -95,3 +95,5 @@ services:
       - "${HTTP_PORT:-80}:80"
     volumes:
       - ./logs/nginx:/var/log/nginx
+      # 与 backend 共用上传目录，直接由 nginx 提供 /media/（勿反代到 gunicorn）
+      - ./data/media:/var/www/media:ro

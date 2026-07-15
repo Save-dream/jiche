@@ -105,10 +105,6 @@
                 <div class="text-muted" style="font-size:12px">{{ bike.shop.address }}</div>
               </div>
             </div>
-            <div class="mt-3">
-              <div class="text-muted mb-2" style="font-size:12px; text-align:center">扫码联系商家微信</div>
-              <QRCodeViewer :src="bike.shop.wechat_qrcode" :cache-key="bike.shop.updated_at || bike.shop.id" />
-            </div>
             <el-button type="default" size="small" style="width:100%; margin-top:12px" @click="$router.push(`/shop/${bike.shop.id}`)">
               查看商家全部车源
             </el-button>
@@ -148,10 +144,6 @@
                 <div class="shop-name">{{ bike.shop.name }}</div>
                 <div class="text-muted" style="font-size:12px">{{ bike.shop.address }}</div>
               </div>
-            </div>
-            <div class="mt-3">
-              <div class="text-muted mb-2" style="font-size:12px; text-align:center">扫码联系商家微信</div>
-              <QRCodeViewer :src="bike.shop.wechat_qrcode" :cache-key="bike.shop.updated_at || bike.shop.id" />
             </div>
             <el-button type="default" size="small" style="width:100%; margin-top:12px" @click="$router.push(`/shop/${bike.shop.id}`)">
               查看商家全部车源
@@ -202,8 +194,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore, BIKE_STATUS } from '@/stores/auth'
 import ShareLinkGuide from '@/components/ShareLinkGuide.vue'
-import QRCodeViewer from '@/components/QRCodeViewer.vue'
 import MessageDialog from '@/components/MessageDialog.vue'
+import { copyText } from '@/utils/clipboard'
 import api from '@/api'
 
 const route = useRoute()
@@ -281,12 +273,7 @@ async function shareBike() {
     qs.set('sign', String(route.query.sign))
   }
   const link = `${origin}/bike/${bike.value.id}?${qs.toString()}`
-  try {
-    await navigator.clipboard.writeText(link)
-    ElMessage.success('分享链接已复制，可发送给好友')
-  } catch {
-    ElMessage.info(link)
-  }
+  await copyText(link, { successMsg: '分享链接已复制，可发送给好友' })
 }
 function previewImages(index) { imgViewerIndex.value = index; imgViewerVisible.value = true }
 function previewConditionImages(index) { condImgViewerIndex.value = index; condImgViewerVisible.value = true }

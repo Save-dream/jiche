@@ -13,5 +13,5 @@ urlpatterns = [
     path('api/', include('apps.favorites.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Docker/生产下也允许 gunicorn 直接提供 media（nginx 优先静态挂载；此为兜底）
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

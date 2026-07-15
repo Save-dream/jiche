@@ -151,6 +151,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore, SHOP_STATUS } from '@/stores/auth'
+import { copyText } from '@/utils/clipboard'
 import api from '@/api'
 
 const route = useRoute()
@@ -165,13 +166,7 @@ function goLogin() {
 }
 
 async function copyContact() {
-  const phone = '400-888-0000'
-  try {
-    await navigator.clipboard.writeText(phone)
-    ElMessage.success('客服电话已复制')
-  } catch {
-    ElMessage.info(phone)
-  }
+  await copyText('400-888-0000', { successMsg: '客服电话已复制' })
 }
 
 async function refreshUser() {

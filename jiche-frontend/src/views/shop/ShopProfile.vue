@@ -35,7 +35,7 @@
         </div>
       </el-col>
 
-      <!-- 右：店铺 Logo + 微信二维码 -->
+      <!-- 右：店铺 Logo + 分享 -->
       <el-col :span="8" :xs="24">
         <div class="card">
           <div class="card-header">店铺 Logo</div>
@@ -55,25 +55,6 @@
                 <span>{{ uploadingAvatar ? '上传中…' : (form.avatar ? '更换 Logo' : '上传 Logo') }}</span>
               </label>
               <div class="upload-tip">建议方形图，jpg/png，≤5M · 上传后自动保存</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card mt-3">
-          <div class="card-header">微信二维码</div>
-          <div class="card-body">
-            <div class="qr-section">
-              <div class="qr-current">
-                <img v-if="previewQr" :src="previewQr" class="qrcode-img" />
-                <div v-else class="qr-empty"><el-icon size="40" color="#ddd"><Picture /></el-icon><span>未上传二维码</span></div>
-              </div>
-              <div class="qr-tip">此二维码将展示在您的商家主页和每辆车的详情页底部，供用户扫码咨询。上传后立即生效，无需再点左侧保存。</div>
-              <label class="upload-btn" style="width:100%;justify-content:center;height:44px;border-radius:6px" :class="{ disabled: uploadingQr }">
-                <input type="file" accept="image/jpeg,image/png" @change="handleQRUpload" hidden :disabled="uploadingQr" />
-                <el-icon><Upload /></el-icon>
-                <span>{{ uploadingQr ? '上传中…' : (form.wechat_qrcode ? '更换二维码' : '上传二维码') }}</span>
-              </label>
-              <div class="upload-tip">格式：jpg/png，大小≤5M · 上传后自动保存</div>
             </div>
           </div>
         </div>
@@ -106,12 +87,12 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { getShopShareLink } from '@/utils/bikeSort'
+import { copyText } from '@/utils/clipboard'
 import api from '@/api'
 
 const auth = useAuthStore()
 const formRef = ref()
 const saving = ref(false)
-const uploadingQr = ref(false)
 const uploadingAvatar = ref(false)
 const loading = ref(true)
 const profile = ref(null)
@@ -124,7 +105,6 @@ const form = reactive({
   main_models: '',
   description: '',
   avatar: '',
-  wechat_qrcode: '',
 })
 
 function withCacheBust(url) {
@@ -134,7 +114,6 @@ function withCacheBust(url) {
   return `${base}${base.includes('?') ? '&' : '?'}v=${encodeURIComponent(key)}`
 }
 
-const previewQr = computed(() => withCacheBust(form.wechat_qrcode))
 const previewAvatar = computed(() => withCacheBust(form.avatar))
 
 const rules = {
@@ -173,29 +152,11 @@ async function handleAvatarUpload(e) {
   }
 }
 
-async function handleQRUpload(e) {
-  const file = e.target.files[0]
-  if (!file) return
-  uploadingQr.value = true
-  try {
-    await uploadAndSaveImage(file, 'wechat_qrcode', '微信二维码已更新并生效')
-  } catch { /* interceptor */ }
-  finally {
-    uploadingQr.value = false
-    e.target.value = ''
-  }
-}
-
 async function copyShopLink() {
   const shopId = auth.user?.shop_id
   if (!shopId) { ElMessage.warning('商家信息不存在'); return }
   const link = getShopShareLink(shopId)
-  try {
-    await navigator.clipboard.writeText(link)
-    ElMessage.success('店铺分享链接已复制')
-  } catch {
-    ElMessage.info(link)
-  }
+  await copyText(link, { successMsg: '店铺分享链接已复制' })
 }
 
 function fillForm(data) {
@@ -208,7 +169,6 @@ function fillForm(data) {
     main_models: data.main_models || '',
     description: data.description || '',
     avatar: data.avatar || '',
-    wechat_qrcode: data.wechat_qrcode || '',
   })
 }
 

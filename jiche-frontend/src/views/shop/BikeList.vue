@@ -100,6 +100,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { BIKE_STATUS } from '@/stores/auth'
+import { copyText } from '@/utils/clipboard'
 import api from '@/api'
 
 const bikes = ref([])
@@ -121,12 +122,7 @@ async function copyShareLink(bike) {
   try {
     const res = await api.createBikeShareLink(bike.id)
     const link = res.data.short_url || res.data.full_url
-    try {
-      await navigator.clipboard.writeText(link)
-      ElMessage.success('已复制带签名的短链（7 天有效）')
-    } catch {
-      ElMessage.info(link)
-    }
+    await copyText(link, { successMsg: '已复制带签名的短链（7 天有效）' })
   } catch { /* interceptor */ }
 }
 

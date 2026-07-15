@@ -75,13 +75,19 @@ function defaultHome(auth) {
   return '/'
 }
 
-router.beforeEach((to) => {
+/**
+ * 进入受保护页面前，用服务端 /auth/me/ 校验 token。
+ * 另一浏览器无 token → 登录页；token 无效/过期 → 清会话并登录；
+ * 已登录但无管理员/商家权限 → 回用户首页。
+ */
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
   const needsAuth = to.matched.some((r) => r.meta.requiresAuth)
   const allowAnonymous = to.matched.some((r) => r.meta.allowAnonymous)
   const guestOnly = to.matched.some((r) => r.meta.guestOnly)
+  const needsAdmin = to.matched.some((r) => r.meta.requiresAdmin)
+  const needsShop = to.matched.some((r) => r.meta.requiresShop)
 
-  // 已登录访问登录页 → 回跳目标或角色首页
   if (guestOnly && auth.isLoggedIn) {
     const redirect = to.query.redirect
     if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
@@ -90,26 +96,38 @@ router.beforeEach((to) => {
     return defaultHome(auth)
   }
 
-  // 未登录访问需登录页（短链解析除外）→ 登录并带回跳
-  if (needsAuth && !auth.isLoggedIn && !allowAnonymous) {
-    return { path: '/login', query: { redirect: to.fullPath } }
+  if (allowAnonymous && !needsAuth) {
+    return true
+  }
+
+  // 需要登录：先确保服务端会话有效（localStorage 不能单独当真）
+  if (needsAuth || needsAdmin || needsShop) {
+    if (!auth.token) {
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
+    const user = await auth.refreshUser(api)
+    if (!user) {
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
   }
 
   if (to.name === 'ApplyShop' && auth.isAdmin) {
     return { path: '/admin/audit' }
   }
 
-  if (to.matched.some((r) => r.meta.requiresAdmin) && !auth.isAdmin) {
+  if (needsAdmin && !auth.isAdmin) {
     if (!auth.isLoggedIn) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
     return { path: '/', query: { msg: '需要管理员权限' } }
   }
-  if (to.matched.some((r) => r.meta.requiresShop) && !auth.isShop) {
+
+  if (needsShop && !auth.isShop) {
     if (!auth.isLoggedIn) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
-    return { path: '/profile', query: { msg: '请先完成商家入驻审核' } }
+    // 无商家权限：回用户首页（非商家后台）
+    return { path: '/', query: { msg: '请先完成商家入驻审核' } }
   }
 
   if (to.name === 'ShopHome' && to.params.id) {

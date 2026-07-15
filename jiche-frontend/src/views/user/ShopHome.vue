@@ -20,9 +20,6 @@
             </div>
           </div>
         </div>
-        <div class="shop-contact">
-          <QRCodeViewer :src="shop.wechat_qrcode" :cache-key="shop.updated_at || shop.id" variant="button" />
-        </div>
       </div>
     </div>
 
@@ -56,7 +53,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import BikeCard from '@/components/BikeCard.vue'
 import FilterBar from '@/components/FilterBar.vue'
-import QRCodeViewer from '@/components/QRCodeViewer.vue'
 import { sortShopBikes, applyBikeFilters } from '@/utils/bikeSort'
 import api from '@/api'
 
@@ -159,10 +155,6 @@ onMounted(loadBikes)
   align-items: center;
   gap: 4px;
   line-height: 1.4;
-}
-.shop-contact {
-  border-top: 1px solid #f5f5f5;
-  padding-top: 12px;
 }
 .section-title { font-size: 16px; font-weight: 600; color: #222; }
 

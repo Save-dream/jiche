@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p \
   "$ROOT/data/mysql" \
   "$ROOT/data/media" \
+  "$ROOT/data/media/uploads" \
   "$ROOT/logs/mysql" \
   "$ROOT/logs/backend" \
   "$ROOT/logs/nginx"
