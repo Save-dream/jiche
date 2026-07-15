@@ -188,29 +188,42 @@ class ApplicationService:
         now,
     ) -> Shop:
         """创建商家；若该用户已有逻辑删除店铺则复活并更新资料。"""
+        # 锁定用户行，避免并发审核撞 OneToOne
+        user = User.objects.select_for_update().get(pk=user.pk)
+
         active = Shop.objects.filter(user=user, is_deleted=False).first()
         if active:
             raise ApplicationServiceError('该用户已是商家')
 
+        phone = (application.phone or '').strip()
+        if not phone:
+            raise ApplicationServiceError('申请缺少联系电话，无法通过')
+
         phone_taken = (
-            Shop.objects.filter(phone=application.phone, is_deleted=False)
+            Shop.objects.filter(phone=phone, is_deleted=False)
             .exclude(user=user)
             .exists()
         )
         if phone_taken:
             raise ApplicationServiceError('联系电话已被占用')
 
-        name = (application.name or self._generate_shop_name(application))[:64]
+        name = (application.name or self._generate_shop_name(application)).strip()[:64]
+        if not name:
+            name = self._generate_shop_name(application)[:64]
+
+        # 截断到模型字段长度，避免 MySQL DataError 变成未捕获 500
         fields = {
-            'name': name,
+            'name': name[:64],
             'shop_type': application.shop_type,
-            'contact_name': application.contact_name,
-            'phone': application.phone,
-            'address': application.address or '',
-            'main_models': application.main_models or '',
-            'description': application.description or '',
-            'wechat_qrcode': application.wechat_qrcode or '',
-            'qualification_photo': application.qualification_photo,
+            'contact_name': (application.contact_name or '')[:32],
+            'phone': phone[:11],
+            'address': (application.address or '')[:100],
+            'main_models': (application.main_models or '')[:50],
+            'description': (application.description or '')[:200],
+            'wechat_qrcode': (application.wechat_qrcode or '')[:512] or 'https://example.com/wechat-qrcode-placeholder.png',
+            'qualification_photo': (
+                (application.qualification_photo[:512] if application.qualification_photo else None)
+            ),
             'shop_status': Shop.ShopStatus.NORMAL,
             'approved_at': now,
             'banned_at': None,
@@ -230,3 +243,5 @@ class ApplicationService:
             raise ApplicationServiceError(
                 '创建商家失败，可能是联系电话或用户店铺关系冲突，请检查后重试'
             ) from exc
+        except Exception as exc:
+            raise ApplicationServiceError(f'创建商家失败：{exc}') from exc
