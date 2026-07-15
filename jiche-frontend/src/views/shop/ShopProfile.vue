@@ -198,7 +198,7 @@ onMounted(async () => {
 <style scoped>
 .qr-section { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .qr-current { width: 100%; display: flex; justify-content: center; }
-.qrcode-img { width: 160px; height: 160px; object-fit: contain; border: 1px solid #eee; border-radius: 8px; }
+.logo-img { width: 160px; height: 160px; object-fit: cover; border: 1px solid #eee; border-radius: 8px; }
 .logo-img {
   width: 120px;
   height: 120px;

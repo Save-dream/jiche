@@ -26,7 +26,6 @@ def serialize_shop_public(shop: Shop) -> dict:
         'address': shop.address,
         'main_models': shop.main_models,
         'shop_status': shop.shop_status,
-        'wechat_qrcode': shop.wechat_qrcode,
         'avatar': shop.avatar or '',
         'bike_count': bike_count,
         'description': shop.description,
@@ -45,11 +44,13 @@ def serialize_shop_profile(shop: Shop) -> dict:
 class ShopService:
     def get_shop_detail(self, shop_id: int, status: Optional[int] = None) -> dict:
         try:
-            shop = Shop.objects.get(pk=shop_id, is_deleted=False)
+            shop = Shop.objects.get(pk=shop_id)
         except Shop.DoesNotExist:
             raise ShopServiceError('商家不存在')
+        if shop.is_deleted:
+            raise ShopServiceError('店铺已注销，暂不可访问！')
         if shop.shop_status == Shop.ShopStatus.BANNED:
-            raise ShopServiceError('商家不存在')
+            raise ShopServiceError('店铺已封禁，暂不可访问！')
         bikes_qs = filter_shop_bikes(shop_id, c_end_only=True, status_filter=status)
         return {
             'shop': serialize_shop_public(shop),
@@ -65,7 +66,7 @@ class ShopService:
         shop = self._get_merchant_shop(user)
         allowed = [
             'name', 'contact_name', 'phone', 'address', 'main_models',
-            'description', 'avatar', 'wechat_qrcode', 'qualification_photo',
+            'description', 'avatar', 'qualification_photo',
         ]
         for field in allowed:
             if field in data:
@@ -93,9 +94,25 @@ class ShopService:
         shop.banned_at = timezone.now()
         shop.ban_reason = reason or '违规封禁'
         shop.save(update_fields=['shop_status', 'banned_at', 'ban_reason', 'updated_at'])
+
+        # 强制下架在售车源；已售/商家手动下架/违规下架不动
+        now = timezone.now()
+        Bike.objects.filter(
+            shop_id=shop.id,
+            is_deleted=False,
+            bike_status=Bike.BikeStatus.ON_SALE,
+        ).update(
+            bike_status=Bike.BikeStatus.OFF_SHELF,
+            off_shelf_at=now,
+            offline_by_shop_ban=True,
+            updated_at=now,
+        )
+
         user = shop.user
         user.shop_status = User.ShopStatus.BANNED
-        user.save(update_fields=['shop_status', 'updated_at'])
+        # 失效登录态：鉴权要求 is_active=True
+        user.is_active = False
+        user.save(update_fields=['shop_status', 'is_active', 'updated_at'])
         return serialize_shop_public(shop)
 
     @transaction.atomic
@@ -104,13 +121,30 @@ class ShopService:
             shop = Shop.objects.select_related('user').get(pk=shop_id, is_deleted=False)
         except Shop.DoesNotExist:
             raise ShopServiceError('商家不存在')
+        if shop.shop_status != Shop.ShopStatus.BANNED:
+            raise ShopServiceError('商家未被封禁')
         shop.shop_status = Shop.ShopStatus.NORMAL
         shop.banned_at = None
         shop.ban_reason = None
         shop.save(update_fields=['shop_status', 'banned_at', 'ban_reason', 'updated_at'])
+
+        # 仅恢复因封禁强制下架的车；商家手动下架不在此列
+        now = timezone.now()
+        Bike.objects.filter(
+            shop_id=shop.id,
+            is_deleted=False,
+            offline_by_shop_ban=True,
+        ).update(
+            bike_status=Bike.BikeStatus.ON_SALE,
+            offline_by_shop_ban=False,
+            off_shelf_at=None,
+            updated_at=now,
+        )
+
         user = shop.user
         user.shop_status = User.ShopStatus.APPROVED
-        user.save(update_fields=['shop_status', 'updated_at'])
+        user.is_active = True
+        user.save(update_fields=['shop_status', 'is_active', 'updated_at'])
         return serialize_shop_public(shop)
 
     @transaction.atomic
@@ -122,6 +156,7 @@ class ShopService:
             raise ShopServiceError('商家不存在')
 
         data = serialize_shop_public(shop)
+        was_shop_banned = shop.shop_status == Shop.ShopStatus.BANNED
         Bike.objects.filter(shop_id=shop.id, is_deleted=False).update(is_deleted=True)
 
         # 释放 unique phone，避免逻辑删除后占号
@@ -132,7 +167,12 @@ class ShopService:
         user = shop.user
         user.shop_status = User.ShopStatus.NORMAL
         user.shop_id = None
-        user.save(update_fields=['shop_status', 'shop_id', 'updated_at'])
+        update_fields = ['shop_status', 'shop_id', 'updated_at']
+        # 店铺封禁会使账号 is_active=False；删除店铺后恢复为普通用户可登录
+        if was_shop_banned and not user.is_active:
+            user.is_active = True
+            update_fields.append('is_active')
+        user.save(update_fields=update_fields)
         data['is_deleted'] = True
         return data
 
@@ -202,6 +242,9 @@ class ShopService:
         if not user.shop_id:
             raise ShopServiceError('商家信息不存在')
         try:
-            return Shop.objects.get(pk=user.shop_id, is_deleted=False)
+            shop = Shop.objects.get(pk=user.shop_id, is_deleted=False)
         except Shop.DoesNotExist:
             raise ShopServiceError('商家信息不存在')
+        if shop.shop_status == Shop.ShopStatus.BANNED:
+            raise ShopServiceError('店铺已封禁，暂不可访问！')
+        return shop

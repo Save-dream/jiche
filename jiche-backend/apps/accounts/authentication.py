@@ -9,6 +9,9 @@ from apps.accounts.models import User
 class JWTAuthentication(authentication.BaseAuthentication):
     keyword = 'Bearer'
 
+    def authenticate_header(self, request):
+        return self.keyword
+
     def authenticate(self, request):
         auth_header = authentication.get_authorization_header(request).decode('utf-8')
         if not auth_header:
@@ -36,7 +39,8 @@ class JWTAuthentication(authentication.BaseAuthentication):
                 raise exceptions.AuthenticationFailed('无效 token')
             user = User.objects.filter(pk=user_id, is_deleted=False, is_active=True).first()
             if user is None:
-                raise exceptions.AuthenticationFailed('用户不存在或已禁用')
+                # 无 WWW-Authenticate 时 DRF 会把未认证压成 403；配合 authenticate_header 返回 401
+                return None
             return user, token
         except (InvalidToken, TokenError) as exc:
             raise exceptions.AuthenticationFailed('登录已过期，请重新登录') from exc

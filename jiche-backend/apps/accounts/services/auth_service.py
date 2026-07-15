@@ -290,9 +290,6 @@ class AuthService:
             raise ValueError('账号或密码错误')
         if not user.is_active:
             raise ValueError('账号已被封禁，无法登录')
-        if user.shop_status == User.ShopStatus.BANNED and not user.is_staff:
-            # 封禁商家仍可登录 C 端浏览；后台路由由前端拦截
-            pass
         self.update_login_meta(user, User.LoginPlatform.WEB)
         tokens = self.issue_tokens(user)
         return {

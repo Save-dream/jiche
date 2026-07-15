@@ -114,6 +114,12 @@ class ShareService:
         if timezone.now() > link.expired_at:
             raise ShareServiceError('链接已过期，请联系商家获取最新链接')
 
+        shop = link.shop
+        if shop.is_deleted:
+            raise ShareServiceError('店铺已注销，暂不可访问！')
+        if shop.shop_status == Shop.ShopStatus.BANNED:
+            raise ShareServiceError('店铺已封禁，暂不可访问！')
+
         self.verify_sign(link.shop_id, link.bike_id, link.timestamp, link.sign)
         ShareLink.objects.filter(pk=link.id).update(click_count=F('click_count') + 1)
 

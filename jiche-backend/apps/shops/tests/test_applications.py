@@ -40,11 +40,15 @@ class ApplicationServiceTests(TestCase):
             'address': '广州市天河区',
             'main_models': '本田雅马哈',
             'description': '经营二手摩托',
-            'wechat_qrcode': 'http://example.com/qrcode.jpg',
             'qualification_photo': '',
         }
         payload.update(overrides)
         return payload
+
+    def test_submit_without_wechat_qrcode(self):
+        result = self.service.submit_application(self.user, self._submit_payload())
+        self.assertEqual(result['application']['contact_name'], '张三')
+        self.assertNotIn('wechat_qrcode', result['application'])
 
     def test_submit_application_sets_pending_status(self):
         result = self.service.submit_application(self.user, self._submit_payload())
@@ -123,7 +127,6 @@ class ApplicationAPITests(TestCase):
             'address': '深圳南山',
             'main_models': '川崎宝马',
             'description': '专注进口车',
-            'wechat_qrcode': 'http://example.com/qr.jpg',
         }
         resp = self.client.post(
             '/api/applications/',

@@ -46,6 +46,7 @@
     </div>
   </div>
   <div v-else-if="loading" class="flex-center" style="height:300px"><el-loading /></div>
+  <el-empty v-else description="店铺不存在、已封禁或暂不可访问" />
 </template>
 
 <script setup>
@@ -84,6 +85,9 @@ async function loadBikes() {
     const res = await api.getShopDetail(route.params.id, { status: activeStatus.value || undefined })
     shop.value = res.data.shop
     allBikes.value = res.data.bikes
+  } catch {
+    shop.value = null
+    allBikes.value = []
   } finally {
     loading.value = false
   }

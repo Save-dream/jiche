@@ -54,6 +54,11 @@ class Bike(models.Model):
         related_name='force_off_bikes',
         verbose_name='违规操作人',
     )
+    offline_by_shop_ban = models.BooleanField(
+        '因店铺封禁而下架',
+        default=False,
+        help_text='解封时可据此恢复上架；商家手动下架不标记此项',
+    )
     is_deleted = models.BooleanField('逻辑删除', default=False)
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
     updated_at = models.DateTimeField('更新时间', auto_now=True)

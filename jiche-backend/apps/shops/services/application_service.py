@@ -35,7 +35,6 @@ class ApplicationService:
             'address': application.address,
             'main_models': application.main_models,
             'description': application.description,
-            'wechat_qrcode': application.wechat_qrcode,
             'qualification_photo': application.qualification_photo or '',
             'shop_status': application.application_status,
             'application_status': application.application_status,
@@ -78,8 +77,6 @@ class ApplicationService:
 
         if shop_type == ShopApplication.ShopType.ENTERPRISE and not data.get('qualification_photo'):
             raise ApplicationServiceError('企业商户必须上传资质照片')
-        if not data.get('wechat_qrcode'):
-            raise ApplicationServiceError('请上传微信二维码')
         shop_name = (data.get('name') or '').strip()
         if not shop_name:
             raise ApplicationServiceError('请填写商家名称')
@@ -93,7 +90,7 @@ class ApplicationService:
             address=data.get('address', ''),
             main_models=data.get('main_models', ''),
             description=data.get('description', ''),
-            wechat_qrcode=data['wechat_qrcode'],
+            wechat_qrcode='',
             qualification_photo=data.get('qualification_photo') or None,
             application_status=ShopApplication.ApplicationStatus.PENDING,
         )
@@ -220,7 +217,7 @@ class ApplicationService:
             'address': (application.address or '')[:100],
             'main_models': (application.main_models or '')[:50],
             'description': (application.description or '')[:200],
-            'wechat_qrcode': (application.wechat_qrcode or '')[:512] or 'https://example.com/wechat-qrcode-placeholder.png',
+            'wechat_qrcode': '',
             'qualification_photo': (
                 (application.qualification_photo[:512] if application.qualification_photo else None)
             ),

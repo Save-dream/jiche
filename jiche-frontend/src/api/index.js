@@ -12,6 +12,18 @@ const request = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+/** 短时间相同错误只提示一次，避免首屏并发 503 刷屏 */
+let lastErrorKey = ''
+let lastErrorAt = 0
+function showErrorOnce(message, ttlMs = 2500) {
+  const now = Date.now()
+  const key = String(message || '')
+  if (key && key === lastErrorKey && now - lastErrorAt < ttlMs) return
+  lastErrorKey = key
+  lastErrorAt = now
+  ElMessage.error(key || '请求失败')
+}
+
 request.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -25,19 +37,20 @@ request.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.msg || '请求失败')
+      showErrorOnce(res.msg || '请求失败')
       return Promise.reject(new Error(res.msg))
     }
     return res
   },
   (error) => {
-    if (error.response?.status === 403) {
-      ElMessage.error('暂无操作权限')
-    } else if (error.response?.status === 409) {
-      const msg = error.response?.data?.msg || '请求冲突'
-      return Promise.reject(new Error(msg))
-    } else if (error.response?.status === 401) {
-      ElMessage.error('登录已过期，请重新登录')
+    const status = error.response?.status
+    const msg = error.response?.data?.msg
+    if (status === 403) {
+      showErrorOnce(msg || '暂无操作权限')
+    } else if (status === 409) {
+      return Promise.reject(new Error(msg || '请求冲突'))
+    } else if (status === 401) {
+      showErrorOnce(msg || '登录已过期，请重新登录')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       // 触发下次路由守卫重新鉴权；若已在登录页则不跳转
@@ -45,10 +58,14 @@ request.interceptors.response.use(
         const redirect = encodeURIComponent(window.location.pathname + window.location.search)
         window.location.assign(`/login?redirect=${redirect}`)
       }
+    } else if (status === 503) {
+      showErrorOnce(msg || '服务暂时繁忙，请稍后重试')
+    } else if (msg) {
+      showErrorOnce(msg)
     } else if (error.code === 'ERR_NETWORK') {
-      ElMessage.error('无法连接后端，请确认 Django 服务已启动（端口 8000）')
+      showErrorOnce('无法连接后端，请确认 Django 服务已启动（端口 8000）')
     } else {
-      ElMessage.error(error.message || '网络错误')
+      showErrorOnce(error.message || '网络错误')
     }
     return Promise.reject(error)
   }

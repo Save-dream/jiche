@@ -9,6 +9,9 @@
     <div class="fav-card__body">
       <div class="fav-card__title" @click="goDetail">{{ bike.brand }} {{ bike.model }}</div>
       <div class="fav-card__meta">{{ bike.year }}年 · {{ bike.displacement }}</div>
+      <div v-if="bike.shop_name" class="fav-card__shop" @click.stop="goShop">
+        {{ bike.shop_name }}
+      </div>
       <div class="fav-card__footer">
         <span v-if="!isUnavailable" class="fav-card__price">¥{{ formatPrice(bike.price) }}</span>
         <span v-else class="fav-card__unavailable">{{ unavailableLabel }}</span>
@@ -43,6 +46,11 @@ function goDetail() {
     return
   }
   router.push({ path: `/bike/${props.bike.id}`, query: { shop_id: props.bike.shop_id } })
+}
+
+function goShop() {
+  if (!props.bike.shop_id) return
+  router.push(`/shop/${props.bike.shop_id}`)
 }
 
 function formatPrice(price) {
@@ -88,7 +96,17 @@ function formatPrice(price) {
   cursor: pointer;
 }
 .fav-card.disabled .fav-card__title { cursor: not-allowed; color: #999; }
-.fav-card__meta { font-size: 12px; color: #888; margin-bottom: 8px; }
+.fav-card__meta { font-size: 12px; color: #888; margin-bottom: 6px; }
+.fav-card__shop {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fav-card__shop:hover { color: #1677ff; }
 .fav-card__footer { display: flex; align-items: center; justify-content: space-between; }
 .fav-card__price { font-size: 16px; font-weight: 700; color: #ff4d4f; }
 .fav-card__unavailable { font-size: 13px; color: #999; }

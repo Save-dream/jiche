@@ -24,12 +24,6 @@
         <el-table-column prop="phone" label="电话" width="130" />
         <el-table-column prop="address" label="经营地址" min-width="140" show-overflow-tooltip />
         <el-table-column prop="main_models" label="主营车型" min-width="120" show-overflow-tooltip />
-        <el-table-column label="微信二维码" width="90" align="center">
-          <template #default="{ row }">
-            <el-image :src="mediaUrl(row.wechat_qrcode)" style="width:40px;height:40px;border-radius:4px" fit="contain"
-              :preview-src-list="[mediaUrl(row.wechat_qrcode)]" preview-teleported />
-          </template>
-        </el-table-column>
         <el-table-column label="资质照片" width="90" align="center">
           <template #default="{ row }">
             <el-image v-if="row.qualification_photo" :src="mediaUrl(row.qualification_photo)" style="width:40px;height:40px;border-radius:4px"
@@ -80,13 +74,8 @@
           <div class="audit-row" v-if="row.description"><span class="label">说明</span><span>{{ row.description }}</span></div>
         </div>
 
-        <div class="audit-images">
+        <div class="audit-images" v-if="row.qualification_photo">
           <div class="image-item">
-            <div class="image-label">微信二维码</div>
-            <el-image :src="mediaUrl(row.wechat_qrcode)" fit="contain" class="audit-image"
-              :preview-src-list="[mediaUrl(row.wechat_qrcode)]" preview-teleported />
-          </div>
-          <div class="image-item" v-if="row.qualification_photo">
             <div class="image-label">资质照片</div>
             <el-image :src="mediaUrl(row.qualification_photo)" fit="contain" class="audit-image"
               :preview-src-list="[mediaUrl(row.qualification_photo)]" preview-teleported />

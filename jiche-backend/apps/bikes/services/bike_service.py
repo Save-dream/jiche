@@ -83,7 +83,6 @@ def serialize_shop_for_bike_detail(shop: Shop) -> dict:
         'address': shop.address,
         'main_models': shop.main_models,
         'shop_status': shop.shop_status,
-        'wechat_qrcode': shop.wechat_qrcode,
         'avatar': shop.avatar or '',
         'bike_count': bike_count,
         'description': shop.description,
@@ -106,6 +105,11 @@ class BikeService:
             bike = Bike.objects.select_related('shop').get(pk=bike_id)
         except Bike.DoesNotExist:
             raise BikeServiceError('车辆不存在或已删除')
+        shop = bike.shop
+        if shop.is_deleted:
+            raise BikeServiceError('店铺已注销，暂不可访问！')
+        if shop.shop_status == Shop.ShopStatus.BANNED:
+            raise BikeServiceError('店铺已封禁，暂不可访问！')
         if bike.is_deleted:
             raise BikeServiceError('车辆不存在或已删除')
         if bike.bike_status not in (Bike.BikeStatus.ON_SALE, Bike.BikeStatus.SOLD):

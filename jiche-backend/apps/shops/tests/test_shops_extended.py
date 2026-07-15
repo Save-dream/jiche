@@ -115,6 +115,131 @@ class ShopExtendedAPITests(TestCase):
         self.assertEqual(stats_resp.status_code, 200)
         self.assertIn('total_shops', stats_resp.json()['data'])
 
+    def test_shop_detail_status_filter(self):
+        Bike.objects.create(
+            shop=self.shop,
+            brand='雅马哈',
+            model='R3',
+            year=2020,
+            displacement='321cc',
+            mileage=12000,
+            price=22000,
+            engine_status='正常',
+            suspension_status='正常',
+            brake_status='正常',
+            electrical_status='正常',
+            frame_status='无事故',
+            modification='无',
+            defects='无',
+            maintenance='良好',
+            cover_image='http://example.com/r3.jpg',
+            bike_status=Bike.BikeStatus.SOLD,
+            published_at=timezone.now(),
+        )
+        on_sale = self.client.get(f'/api/shops/{self.shop.id}/', {'status': 1})
+        self.assertEqual(on_sale.status_code, 200)
+        on_sale_list = on_sale.json()['data']['bikes']
+        self.assertTrue(on_sale_list)
+        self.assertTrue(all(b['bike_status'] == Bike.BikeStatus.ON_SALE for b in on_sale_list))
+
+        sold = self.client.get(f'/api/shops/{self.shop.id}/', {'status': 2})
+        self.assertEqual(sold.status_code, 200)
+        sold_list = sold.json()['data']['bikes']
+        self.assertTrue(sold_list)
+        self.assertTrue(all(b['bike_status'] == Bike.BikeStatus.SOLD for b in sold_list))
+
+    def test_admin_ban_unban_shop_bikes(self):
+        on_sale = Bike.objects.get(shop=self.shop, brand='本田')
+        manual_off = Bike.objects.create(
+            shop=self.shop,
+            brand='铃木',
+            model='GSX',
+            year=2019,
+            displacement='250cc',
+            mileage=9000,
+            price=15000,
+            engine_status='正常',
+            suspension_status='正常',
+            brake_status='正常',
+            electrical_status='正常',
+            frame_status='无事故',
+            modification='无',
+            defects='无',
+            maintenance='良好',
+            cover_image='http://example.com/gsx.jpg',
+            bike_status=Bike.BikeStatus.OFF_SHELF,
+            published_at=timezone.now(),
+        )
+
+        ban_resp = self.client.post(
+            f'/api/admin/shops/{self.shop.id}/ban/',
+            {'reason': '违规'},
+            format='json',
+            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
+        )
+        self.assertEqual(ban_resp.status_code, 200)
+        on_sale.refresh_from_db()
+        manual_off.refresh_from_db()
+        self.shop_user.refresh_from_db()
+        self.assertEqual(on_sale.bike_status, Bike.BikeStatus.OFF_SHELF)
+        self.assertTrue(on_sale.offline_by_shop_ban)
+        self.assertEqual(manual_off.bike_status, Bike.BikeStatus.OFF_SHELF)
+        self.assertFalse(manual_off.offline_by_shop_ban)
+        self.assertFalse(self.shop_user.is_active)
+
+        detail = self.client.get(f'/api/shops/{self.shop.id}/')
+        self.assertEqual(detail.status_code, 404)
+        self.assertIn('封禁', detail.json()['msg'])
+
+        bike_detail = self.client.get(
+            f'/api/bikes/{on_sale.id}/',
+            {'shop_id': self.shop.id},
+        )
+        self.assertEqual(bike_detail.status_code, 404)
+        self.assertIn('封禁', bike_detail.json()['msg'])
+
+        me = self.client.get(
+            '/api/auth/me/',
+            HTTP_AUTHORIZATION=f'Bearer {self.shop_token}',
+        )
+        self.assertEqual(me.status_code, 401)
+        self.assertFalse(self.shop_user.is_active)
+
+        unban_resp = self.client.post(
+            f'/api/admin/shops/{self.shop.id}/unban/',
+            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
+        )
+        self.assertEqual(unban_resp.status_code, 200)
+        on_sale.refresh_from_db()
+        manual_off.refresh_from_db()
+        self.shop_user.refresh_from_db()
+        self.assertEqual(on_sale.bike_status, Bike.BikeStatus.ON_SALE)
+        self.assertFalse(on_sale.offline_by_shop_ban)
+        self.assertEqual(manual_off.bike_status, Bike.BikeStatus.OFF_SHELF)
+        self.assertTrue(self.shop_user.is_active)
+
+    def test_ban_then_delete_shows_closed_message(self):
+        bike = Bike.objects.get(shop=self.shop, brand='本田')
+        self.client.post(
+            f'/api/admin/shops/{self.shop.id}/ban/',
+            {'reason': '违规'},
+            format='json',
+            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
+        )
+        self.client.delete(
+            f'/api/admin/shops/{self.shop.id}/',
+            HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
+        )
+        detail = self.client.get(f'/api/shops/{self.shop.id}/')
+        self.assertEqual(detail.status_code, 404)
+        self.assertIn('注销', detail.json()['msg'])
+        bike_detail = self.client.get(
+            f'/api/bikes/{bike.id}/',
+            {'shop_id': self.shop.id},
+        )
+        self.assertEqual(bike_detail.status_code, 404)
+        self.assertIn('注销', bike_detail.json()['msg'])
+
     def test_admin_soft_delete_shop(self):
         del_resp = self.client.delete(
             f'/api/admin/shops/{self.shop.id}/',

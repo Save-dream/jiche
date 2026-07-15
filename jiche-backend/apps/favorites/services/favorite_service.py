@@ -26,6 +26,8 @@ class FavoriteService:
             if bike.is_deleted:
                 result.append({
                     'id': bike.id,
+                    'shop_id': bike.shop_id,
+                    'shop_name': bike.shop.name if bike.shop_id else '',
                     'unavailable': True,
                     'brand': bike.brand,
                     'model': bike.model,

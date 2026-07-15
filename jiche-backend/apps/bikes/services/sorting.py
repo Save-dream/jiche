@@ -37,6 +37,7 @@ def filter_shop_bikes(
         qs = qs.filter(is_deleted=False)
     if c_end_only:
         qs = qs.filter(bike_status__in=[Bike.BikeStatus.ON_SALE, Bike.BikeStatus.SOLD])
-    elif status_filter:
+    # 与 c_end_only 可叠加；此前 elif 导致店铺详情「在售/已售」筛选失效
+    if status_filter:
         qs = qs.filter(bike_status=status_filter)
     return apply_bike_sorting(qs)

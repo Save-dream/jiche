@@ -14,7 +14,6 @@ class ShopApplicationSubmitSerializer(serializers.Serializer):
     address = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
     main_models = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
     description = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
-    wechat_qrcode = serializers.CharField(max_length=512)
     qualification_photo = serializers.CharField(max_length=512, required=False, allow_blank=True, allow_null=True)
 
     def validate_name(self, value):
@@ -59,7 +58,6 @@ class ShopProfileUpdateSerializer(serializers.Serializer):
     main_models = serializers.CharField(max_length=50, required=False, allow_blank=True)
     description = serializers.CharField(max_length=200, required=False, allow_blank=True)
     avatar = serializers.CharField(max_length=512, required=False, allow_blank=True, allow_null=True)
-    wechat_qrcode = serializers.CharField(max_length=512, required=False, allow_blank=True)
     qualification_photo = serializers.CharField(max_length=512, required=False, allow_blank=True, allow_null=True)
 
 

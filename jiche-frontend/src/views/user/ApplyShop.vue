@@ -60,21 +60,6 @@
 
           <div class="form-section-title">资质证明</div>
 
-          <el-form-item label="微信二维码" prop="wechat_qrcode" required>
-            <div class="upload-area">
-              <div v-if="form.wechat_qrcode_preview" class="preview-wrap">
-                <img :src="form.wechat_qrcode_preview" class="upload-image-preview" />
-                <el-button v-if="!isReadOnly" size="small" type="danger" plain @click="clearQR">删除</el-button>
-              </div>
-              <label v-else-if="!isReadOnly" class="upload-btn">
-                <input type="file" accept="image/jpeg,image/png" @change="handleQRUpload" hidden />
-                <el-icon><Plus /></el-icon>
-                <span>上传微信二维码</span>
-              </label>
-              <div v-if="!isReadOnly" class="upload-tip">格式：jpg/png，大小≤5M</div>
-            </div>
-          </el-form-item>
-
           <el-form-item label="资质照片" :prop="form.shop_type === '企业商户' ? 'qualification_photo' : ''">
             <div class="upload-area">
               <div v-if="form.qualification_photo_preview" class="preview-wrap">
@@ -133,9 +118,6 @@ const form = reactive({
   address: '',
   main_models: '',
   description: '',
-  wechat_qrcode: null,
-  wechat_qrcode_preview: '',
-  wechat_qrcode_url: '',
   qualification_photo: null,
   qualification_photo_preview: '',
   qualification_photo_url: '',
@@ -181,10 +163,6 @@ function fillFromApplication(app) {
   form.main_models = app.main_models || ''
   form.description = app.description || ''
   appliedAt.value = app.applied_at || ''
-  if (app.wechat_qrcode) {
-    form.wechat_qrcode_url = app.wechat_qrcode
-    form.wechat_qrcode_preview = mediaUrl(app.wechat_qrcode)
-  }
   if (app.qualification_photo) {
     form.qualification_photo_url = app.qualification_photo
     form.qualification_photo_preview = mediaUrl(app.qualification_photo)
@@ -227,14 +205,8 @@ function handleFile(e, previewKey, fileKey) {
   form[fileKey] = file
   form[previewKey] = URL.createObjectURL(file)
 }
-function handleQRUpload(e) { handleFile(e, 'wechat_qrcode_preview', 'wechat_qrcode') }
 function handleQualUpload(e) { handleFile(e, 'qualification_photo_preview', 'qualification_photo') }
 
-function clearQR() {
-  form.wechat_qrcode = null
-  form.wechat_qrcode_preview = ''
-  form.wechat_qrcode_url = ''
-}
 function clearQual() {
   form.qualification_photo = null
   form.qualification_photo_preview = ''
@@ -252,10 +224,6 @@ async function uploadIfNeeded(file, existingUrl) {
 async function submit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
-  if (!form.wechat_qrcode && !form.wechat_qrcode_url) {
-    ElMessage.error('请上传微信二维码')
-    return
-  }
   if (form.shop_type === '企业商户' && !form.qualification_photo && !form.qualification_photo_url) {
     ElMessage.error('企业商户必须上传资质照片')
     return
@@ -263,7 +231,6 @@ async function submit() {
 
   submitting.value = true
   try {
-    const wechat_qrcode = await uploadIfNeeded(form.wechat_qrcode, form.wechat_qrcode_url)
     const qualification_photo = await uploadIfNeeded(form.qualification_photo, form.qualification_photo_url)
     const res = await api.submitApplication({
       name: form.name.trim(),
@@ -273,7 +240,6 @@ async function submit() {
       address: form.address,
       main_models: form.main_models,
       description: form.description,
-      wechat_qrcode,
       qualification_photo: qualification_photo || '',
     })
     auth.setUser(res.data.user)
